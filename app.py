@@ -8,7 +8,6 @@ import plotly.graph_objects as go
 import plotly.express as px
 import time
 import numpy as np
-import ta  # Technical analysis library
 
 # Futuristic Streamlit setup
 st.set_page_config(
@@ -185,12 +184,10 @@ if 'initialized' not in st.session_state:
     st.session_state.bitcoin_price = None
     st.session_state.network_data = None
     st.session_state.global_signal = "NEUTRAL"
-    st.session_state.real_time_data = True
 
 class RealTimeDataFetcher:
     def __init__(self):
         self.binance_url = "https://api.binance.com/api/v3"
-        self.coins = ["ETHUSDT", "LTCUSDT", "SOLUSDT", "ADAUSDT", "AVAXUSDT", "DOTUSDT", "LINKUSDT"]
     
     def get_binance_price(self, symbol):
         """Get real-time price from Binance"""
@@ -215,82 +212,6 @@ class RealTimeDataFetcher:
         except:
             pass
         return 42500.75  # Final fallback
-    
-    def get_klines_data(self, symbol, interval='1h', limit=100):
-        """Get historical klines for technical analysis"""
-        try:
-            url = f"{self.binance_url}/klines"
-            params = {
-                'symbol': symbol,
-                'interval': interval,
-                'limit': limit
-            }
-            response = requests.get(url, params=params, timeout=10)
-            if response.status_code == 200:
-                klines = response.json()
-                df = pd.DataFrame(klines, columns=[
-                    'open_time', 'open', 'high', 'low', 'close', 'volume',
-                    'close_time', 'quote_asset_volume', 'number_of_trades',
-                    'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore'
-                ])
-                # Convert to numeric
-                for col in ['open', 'high', 'low', 'close', 'volume']:
-                    df[col] = pd.to_numeric(df[col])
-                return df
-        except Exception as e:
-            print(f"Error fetching klines for {symbol}: {e}")
-        return None
-    
-    def calculate_technical_indicators(self, df):
-        """Calculate EMA, RSI, and other indicators"""
-        if df is None or len(df) < 50:
-            return None, None, None, None
-        
-        try:
-            # Calculate EMAs
-            df['ema_20'] = ta.trend.EMAIndicator(df['close'], window=20).ema_indicator()
-            df['ema_50'] = ta.trend.EMAIndicator(df['close'], window=50).ema_indicator()
-            
-            # Calculate RSI
-            df['rsi'] = ta.momentum.RSIIndicator(df['close'], window=14).rsi()
-            
-            # Calculate MACD
-            macd = ta.trend.MACD(df['close'])
-            df['macd'] = macd.macd()
-            df['macd_signal'] = macd.macd_signal()
-            df['macd_histogram'] = macd.macd_diff()
-            
-            # Volume analysis
-            current_volume = df['volume'].iloc[-1]
-            avg_volume = df['volume'].tail(20).mean()
-            volume_ratio = current_volume / avg_volume if avg_volume > 0 else 1
-            
-            # Get latest values
-            current_ema_20 = df['ema_20'].iloc[-1]
-            current_ema_50 = df['ema_50'].iloc[-1]
-            current_rsi = df['rsi'].iloc[-1]
-            current_macd = df['macd'].iloc[-1]
-            current_macd_signal = df['macd_signal'].iloc[-1]
-            
-            return current_ema_20, current_ema_50, volume_ratio, current_rsi, current_macd, current_macd_signal
-            
-        except Exception as e:
-            print(f"Error calculating indicators: {e}")
-            return None, None, None, None, None, None
-    
-    def get_funding_rate(self, symbol):
-        """Get funding rate from Binance Futures"""
-        try:
-            # Remove USDT for futures symbol
-            futures_symbol = symbol.replace("USDT", "")
-            url = f"https://fapi.binance.com/fapi/v1/premiumIndex?symbol={futures_symbol}USDT"
-            response = requests.get(url, timeout=5)
-            if response.status_code == 200:
-                data = response.json()
-                return float(data.get('lastFundingRate', 0)) * 100  # Convert to percentage
-        except:
-            pass
-        return 0.01  # Neutral fallback
 
 class AltcoinSignalGenerator:
     def __init__(self):
@@ -298,102 +219,49 @@ class AltcoinSignalGenerator:
         self.coin_pairs = ["ETH/USDT", "LTC/USDT", "SOL/USDT", "ADA/USDT", "AVAX/USDT", "DOT/USDT", "LINK/USDT"]
         self.binance_symbols = ["ETHUSDT", "LTCUSDT", "SOLUSDT", "ADAUSDT", "AVAXUSDT", "DOTUSDT", "LINKUSDT"]
     
-    def analyze_coin(self, coin_pair, binance_symbol, global_signal, tor_percentage, network_trend):
-        """Analyze individual coin and generate signal"""
-        try:
-            # Get current price
-            current_price = self.data_fetcher.get_binance_price(binance_symbol)
-            if not current_price:
-                return None
-            
-            # Get technical data
-            df = self.data_fetcher.get_klines_data(binance_symbol)
-            ema_20, ema_50, volume_ratio, rsi, macd, macd_signal = self.data_fetcher.calculate_technical_indicators(df)
-            
-            if ema_20 is None:
-                return None
-            
-            # Get funding rate
-            funding_rate = self.data_fetcher.get_funding_rate(binance_symbol)
-            
-            signal_data = {
-                "coin": coin_pair,
-                "current_price": current_price,
-                "timestamp": datetime.utcnow().isoformat() + "Z",
-                "ema_20": ema_20,
-                "ema_50": ema_50,
-                "rsi": rsi,
-                "volume_ratio": volume_ratio,
-                "funding_rate": funding_rate,
-                "macd": macd,
-                "macd_signal": macd_signal
-            }
-            
-            confirmation_factors = 0
-            max_factors = 0
-            
-            # BITNODE SELL SIGNAL LOGIC
-            if global_signal == "SELL":
-                max_factors = 4
-                
-                # Check SELL confirmation factors
-                if ema_20 < ema_50:  # Death cross
-                    confirmation_factors += 1
-                if volume_ratio < 0.8:  # Volume drop
-                    confirmation_factors += 1
-                if funding_rate < 0:  # Negative funding
-                    confirmation_factors += 1
-                if rsi < 40:  # Oversold momentum
-                    confirmation_factors += 1
-                if macd < macd_signal:  # MACD bearish
-                    confirmation_factors += 1
-                
-                if confirmation_factors >= 2:  # At least 2 confirmations
-                    signal_data["signal"] = "SELL"
-                    if confirmation_factors >= 3:
-                        signal_data["confidence"] = "High"
-                    else:
-                        signal_data["confidence"] = "Medium"
-                    return signal_data
-            
-            # BITNODE BUY SIGNAL LOGIC  
-            elif global_signal == "BUY":
-                max_factors = 4
-                
-                # Check BUY confirmation factors
-                if ema_20 > ema_50:  # Golden cross
-                    confirmation_factors += 1
-                if funding_rate > 0:  # Positive funding
-                    confirmation_factors += 1
-                if volume_ratio > 1.2:  # Volume surge
-                    confirmation_factors += 1
-                if rsi > 60:  # Strong momentum
-                    confirmation_factors += 1
-                if macd > macd_signal:  # MACD bullish
-                    confirmation_factors += 1
-                
-                if confirmation_factors >= 2:  # At least 2 confirmations
-                    signal_data["signal"] = "BUY"
-                    if confirmation_factors >= 3:
-                        signal_data["confidence"] = "High"
-                    else:
-                        signal_data["confidence"] = "Medium"
-                    return signal_data
-            
-            return None
-                
-        except Exception as e:
-            print(f"Error analyzing {coin_pair}: {e}")
-            return None
-    
     def generate_signals(self, global_signal, tor_percentage, network_trend):
-        """Generate real-time altcoin signals"""
+        """Generate altcoin signals based ONLY on Bitnode movement"""
         signals = []
         
         for coin_pair, binance_symbol in zip(self.coin_pairs, self.binance_symbols):
-            signal = self.analyze_coin(coin_pair, binance_symbol, global_signal, tor_percentage, network_trend)
-            if signal:
-                signals.append(signal)
+            try:
+                # Get current price only for display
+                current_price = self.data_fetcher.get_binance_price(binance_symbol)
+                if not current_price:
+                    continue
+                
+                signal_data = {
+                    "coin": coin_pair,
+                    "current_price": current_price,
+                    "timestamp": datetime.utcnow().isoformat() + "Z"
+                }
+                
+                # PURE BITNODE LOGIC - No technical analysis
+                if global_signal == "BUY":
+                    signal_data["signal"] = "BUY"
+                    # Confidence based on Bitnode signal strength
+                    if tor_percentage < 3:  # Very low Tor = Strong buy
+                        signal_data["confidence"] = "High"
+                    elif tor_percentage < 5:  # Low Tor = Medium buy
+                        signal_data["confidence"] = "Medium"
+                    else:
+                        signal_data["confidence"] = "Low"
+                    signals.append(signal_data)
+                
+                elif global_signal == "SELL":
+                    signal_data["signal"] = "SELL"
+                    # Confidence based on Bitnode signal strength
+                    if tor_percentage > 15:  # Very high Tor = Strong sell
+                        signal_data["confidence"] = "High"
+                    elif tor_percentage > 10:  # High Tor = Medium sell
+                        signal_data["confidence"] = "Medium"
+                    else:
+                        signal_data["confidence"] = "Low"
+                    signals.append(signal_data)
+                    
+            except Exception as e:
+                print(f"Error processing {coin_pair}: {e}")
+                continue
         
         return signals
 
@@ -530,7 +398,6 @@ class BitcoinNodeAnalyzer:
         
         return {
             'current_tor': round(current_tor_percentage, 2),
-            'tor_trend': 0,  # Would need historical Tor data
             'bias': bias,
             'network_trend': network_trend
         }
@@ -562,7 +429,7 @@ def main():
     
     # Force initial data load
     if st.session_state.network_data is None:
-        with st.spinner("🔄 Loading real-time data..."):
+        with st.spinner("🔄 Loading Bitnode data..."):
             analyzer.update_network_data()
             if analyzer.historical_data:
                 st.session_state.network_data = analyzer.historical_data[-1]
@@ -580,7 +447,7 @@ def main():
         
         # Node data refresh every 30 minutes
         if current_time - st.session_state.last_refresh > node_refresh_interval:
-            with st.spinner("🔄 Updating node data..."):
+            with st.spinner("🔄 Updating Bitnode data..."):
                 if analyzer.update_network_data():
                     st.session_state.network_data = analyzer.historical_data[-1]
                     st.session_state.last_refresh = current_time
@@ -588,7 +455,7 @@ def main():
         # Altcoin signals refresh every 5 minutes
         if current_time - st.session_state.last_altcoin_refresh > altcoin_refresh_interval:
             if st.session_state.network_data:
-                with st.spinner("🔍 Analyzing altcoin signals..."):
+                with st.spinner("🔍 Generating signals from Bitnode movement..."):
                     network_signal = analyzer.calculate_network_signal(st.session_state.network_data)
                     tor_trend = analyzer.calculate_tor_trend(st.session_state.network_data['tor_percentage'])
                     
@@ -600,10 +467,9 @@ def main():
                         signals = altcoin_generator.generate_signals(global_signal, tor_percentage, network_trend)
                         st.session_state.altcoin_signals = signals
                     st.session_state.last_altcoin_refresh = current_time
-    
-    # HEADER
+   # HEADER
     st.markdown('<h1 class="cyber-header">🚀 BITNODE ALTCOIN FILTER</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="cyber-subheader">REAL-TIME • LIVE APIS • PROFESSIONAL TRADING SIGNALS</p>', unsafe_allow_html=True)
+    st.markdown('<p class="cyber-subheader">PURE BITNODE MOVEMENT • NO TECHNICAL ANALYSIS • REAL-TIME</p>', unsafe_allow_html=True)
     
     # AUTO-REFRESH STATUS
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
@@ -623,10 +489,10 @@ def main():
         st.markdown(f'''
         <div class="auto-refresh-status">
             <div style="font-size: 1.2rem; margin-bottom: 0.5rem;">
-                {status_emoji} <span class="live-pulse">REAL-TIME MODE: {status_text}</span>
+                {status_emoji} <span class="live-pulse">BITNODE MODE: {status_text}</span>
             </div>
             <div style="font-size: 0.8rem; color: #ffd700;">
-                Prices: 2 min • Nodes: {time_until_node:02d} min • Altcoins: {time_until_altcoin:02d} min
+                Prices: 2 min • Nodes: {time_until_node:02d} min • Signals: {time_until_altcoin:02d} min
             </div>
         </div>
         ''', unsafe_allow_html=True)
@@ -639,16 +505,16 @@ def main():
     
     with col3:
         if st.button("🔄 NODES", key="refresh_nodes", use_container_width=True):
-            with st.spinner("Fetching live node data..."):
+            with st.spinner("Fetching Bitnode data..."):
                 if analyzer.update_network_data():
                     st.session_state.network_data = analyzer.historical_data[-1]
                     st.session_state.last_refresh = datetime.now()
-                    st.success("✅ Live node data updated!")
+                    st.success("✅ Bitnode data updated!")
                     st.rerun()
     
     with col4:
-        if st.button("🎯 ALTCOINS", key="refresh_altcoins", use_container_width=True):
-            with st.spinner("Generating live signals..."):
+        if st.button("🎯 SIGNALS", key="refresh_altcoins", use_container_width=True):
+            with st.spinner("Generating signals from Bitnode movement..."):
                 if st.session_state.network_data:
                     network_signal = analyzer.calculate_network_signal(st.session_state.network_data)
                     tor_trend = analyzer.calculate_tor_trend(st.session_state.network_data['tor_percentage'])
@@ -661,7 +527,7 @@ def main():
                         signals = altcoin_generator.generate_signals(global_signal, tor_percentage, network_trend)
                         st.session_state.altcoin_signals = signals
                         st.session_state.last_altcoin_refresh = datetime.now()
-                        st.success(f"✅ {len(signals)} live altcoin signals generated!")
+                        st.success(f"✅ {len(signals)} signals from Bitnode movement!")
                         st.rerun()
     
     # REAL-TIME BITCOIN PRICE SECTION
@@ -686,9 +552,9 @@ def main():
         st.markdown('</div>', unsafe_allow_html=True)
         st.markdown(f'<p style="text-align: center; color: #8892b0; font-family: Rajdhani;">🕒 Live price: {datetime.now().strftime("%H:%M:%S")} UTC</p>', unsafe_allow_html=True)
     
-    # REAL-TIME BITNODE GLOBAL SIGNAL SECTION
+    # PURE BITNODE GLOBAL SIGNAL SECTION
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-    st.markdown('<h2 class="section-header">🌐 REAL-TIME BITNODE SIGNAL</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-header">🌐 PURE BITNODE SIGNAL</h2>', unsafe_allow_html=True)
     
     if st.session_state.network_data:
         current_data = st.session_state.network_data
@@ -701,19 +567,22 @@ def main():
         if global_signal == "BUY":
             signal_class = "signal-buy"
             emoji = "📈"
+            explanation = "Network Growing + Low Privacy = BULLISH"
         elif global_signal == "SELL":
             signal_class = "signal-sell"
             emoji = "📉"
+            explanation = "Network Shrinking + High Privacy = BEARISH"
         else:
             signal_class = "signal-neutral"
             emoji = "➡️"
+            explanation = "Network Stable = NEUTRAL"
         
         st.markdown(f'<div class="{signal_class}">', unsafe_allow_html=True)
         
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            st.metric("🌐 GLOBAL SIGNAL", f"{global_signal} {emoji}")
+            st.metric("🌐 BITNODE SIGNAL", f"{global_signal} {emoji}")
             st.metric("📊 NETWORK TREND", f"{network_signal.get('trend', 0):+.4f}")
         
         with col2:
@@ -724,208 +593,182 @@ def main():
             st.metric("🔮 MARKET BIAS", tor_trend.get('bias', 'NEUTRAL'))
             st.metric("🟢 ACTIVE NODES", f"{current_data['active_nodes']:,}")
         
+        # Signal explanation
+        st.markdown(f'<p style="text-align: center; color: #ffffff; font-family: Orbitron; margin-top: 1rem;">🎯 {explanation}</p>', unsafe_allow_html=True)
+        
         st.markdown('</div>', unsafe_allow_html=True)
         
-        # Network Health Summary
+        # Abdullah's Formula Display
         st.markdown('<div style="margin-top: 1rem;"></div>', unsafe_allow_html=True)
-        col1, col2, col3 = st.columns(3)
+        st.markdown('<div class="cyber-card">', unsafe_allow_html=True)
+        st.markdown('<h3 style="color: #00ffff; font-family: Orbitron; text-align: center;">🔮 ABDULLAH\'S FORMULA</h3>', unsafe_allow_html=True)
         
-        with col1:
-            if current_data['tor_percentage'] > 20:
-                status = "🟢 EXCELLENT"
-            elif current_data['tor_percentage'] > 10:
-                status = "🟡 GOOD"
-            else:
-                status = "🔴 LOW"
-            st.metric("TOR PRIVACY", status)
+        formula_text = ""
+        if network_signal['trend'] < 0 and current_data['tor_percentage'] > 5:
+            formula_text = "Trend < 0 + Tor > 5% = SELL BIAS"
+        elif network_signal['trend'] > 0 and current_data['tor_percentage'] < 5:
+            formula_text = "Trend > 0 + Tor < 5% = BUY BIAS"
+        else:
+            formula_text = "No strong bias detected"
         
-        with col2:
-            if current_data['active_ratio'] > 0.8:
-                status = "🟢 EXCELLENT"
-            elif current_data['active_ratio'] > 0.6:
-                status = "🟡 GOOD"
-            else:
-                status = "🔴 LOW"
-            st.metric("NETWORK HEALTH", status)
-        
-        with col3:
-            if network_signal['trend'] > 0.01:
-                status = "🟢 GROWING"
-            elif network_signal['trend'] < -0.01:
-                status = "🔴 SHRINKING"
-            else:
-                status = "🟡 STABLE"
-            st.metric("NETWORK TREND", status)
+        st.markdown(f'<p style="text-align: center; color: #ffd700; font-family: Orbitron; font-size: 1.2rem;">{formula_text}</p>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
     
-    # REAL-TIME ALTCOIN SIGNALS SECTION
+    # PURE BITNODE ALTCOIN SIGNALS
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-    st.markdown('<h2 class="section-header">🎯 LIVE ALTCOIN SIGNALS</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-header">🎯 ALTCOIN SIGNALS FROM BITNODE</h2>', unsafe_allow_html=True)
     
     if st.session_state.altcoin_signals:
-        st.markdown(f'<p style="color: #8892b0; text-align: center;">Live analysis: {len(st.session_state.altcoin_signals)} filtered signals</p>', unsafe_allow_html=True)
+        # Filter only High and Medium confidence signals
+        filtered_signals = [s for s in st.session_state.altcoin_signals if s['confidence'] in ['High', 'Medium']]
         
-        # Sort signals by confidence (High first)
-        sorted_signals = sorted(st.session_state.altcoin_signals, 
-                              key=lambda x: (x['confidence'] == 'High', x['confidence'] == 'Medium'), 
-                              reverse=True)
-        
-        for signal in sorted_signals:
-            confidence_class = f"confidence-{signal['confidence'].lower()}"
+        if filtered_signals:
+            st.markdown(f'<p style="color: #8892b0; text-align: center;">Bitnode movement detected: {len(filtered_signals)} strong signals</p>', unsafe_allow_html=True)
             
-            if signal['signal'] == 'BUY':
-                signal_emoji = "🟢"
-                signal_color = "#00ff7f"
-            else:
-                signal_emoji = "🔴"
-                signal_color = "#ff007f"
+            # Sort by confidence (High first)
+            sorted_signals = sorted(filtered_signals, 
+                                  key=lambda x: (x['confidence'] == 'High', x['confidence'] == 'Medium'), 
+                                  reverse=True)
             
-            # Technical indicators summary
-            tech_indicators = []
-            if signal.get('ema_20', 0) > signal.get('ema_50', 1):
-                tech_indicators.append("EMA📈")
-            else:
-                tech_indicators.append("EMA📉")
-            
-            if signal.get('rsi', 50) > 60:
-                tech_indicators.append("RSI🟢")
-            elif signal.get('rsi', 50) < 40:
-                tech_indicators.append("RSI🔴")
-            else:
-                tech_indicators.append("RSI🟡")
+            for signal in sorted_signals:
+                confidence_class = f"confidence-{signal['confidence'].lower()}"
                 
-            if signal.get('volume_ratio', 1) > 1.2:
-                tech_indicators.append("VOL📈")
-            elif signal.get('volume_ratio', 1) < 0.8:
-                tech_indicators.append("VOL📉")
-            
-            st.markdown(f'''
-            <div class="altcoin-signal {confidence_class}">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div style="flex: 2;">
-                        <h3 style="margin: 0; color: {signal_color}; font-family: Orbitron;">
-                            {signal_emoji} {signal['coin']} - {signal['signal']}
-                        </h3>
-                        <p style="margin: 0.2rem 0; color: #8892b0;">
-                            Confidence: <strong>{signal['confidence']}</strong> • 
-                            Price: ${signal['current_price']:,.2f}
-                        </p>
-                        <p style="margin: 0; color: #666; font-size: 0.9rem;">
-                            {' • '.join(tech_indicators)} • Funding: {signal.get('funding_rate', 0):.3f}%
-                        </p>
-                    </div>
-                    <div style="flex: 1; text-align: right;">
-                        <small style="color: #666;">{signal['timestamp'][11:19]} UTC</small>
-                    </div>
-                </div>
-            </div>
-            ''', unsafe_allow_html=True)
-        
-        # BEST TRADES RECOMMENDATION
-        st.markdown('<div style="margin-top: 2rem;"></div>', unsafe_allow_html=True)
-        st.markdown('<h3 style="color: #00ffff; font-family: Orbitron; text-align: center;">🏆 BEST LIVE TRADES</h3>', unsafe_allow_html=True)
-        
-        high_confidence_trades = [s for s in sorted_signals if s['confidence'] == 'High']
-        if high_confidence_trades:
-            best_trades = high_confidence_trades[:3]  # Top 3 high confidence trades
-            
-            cols = st.columns(3)
-            for i, (trade, col) in enumerate(zip(best_trades, cols)):
-                with col:
-                    medal = "🥇" if i == 0 else "🥈" if i == 1 else "🥉"
-                    if trade['signal'] == 'BUY':
-                        color = "#00ff7f"
-                    else:
-                        color = "#ff007f"
-                    
-                    st.markdown(f'''
-                    <div class="cyber-card">
-                        <div style="text-align: center;">
-                            <h2 style="margin: 0; color: {color}; font-family: Orbitron;">
-                                {medal} {trade['coin']}
-                            </h2>
-                            <p style="margin: 0.5rem 0; color: #8892b0; font-size: 1.2rem;">
-                                <strong>{trade['signal']}</strong> • <span style="color: #00ff7f;">{trade['confidence']}</span>
+                if signal['signal'] == 'BUY':
+                    signal_emoji = "🟢"
+                    signal_color = "#00ff7f"
+                    reason = "Following Bitcoin Bullish Movement"
+                else:
+                    signal_emoji = "🔴"
+                    signal_color = "#ff007f"
+                    reason = "Following Bitcoin Bearish Movement"
+                
+                st.markdown(f'''
+                <div class="altcoin-signal {confidence_class}">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="flex: 2;">
+                            <h3 style="margin: 0; color: {signal_color}; font-family: Orbitron;">
+                                {signal_emoji} {signal['coin']} - {signal['signal']}
+                            </h3>
+                            <p style="margin: 0.2rem 0; color: #8892b0;">
+                                Confidence: <strong>{signal['confidence']}</strong> • 
+                                Price: ${signal['current_price']:,.2f}
                             </p>
-                            <p style="margin: 0; color: #ffffff; font-size: 1.1rem;">
-                                ${trade['current_price']:,.2f}
-                            </p>
-                            <p style="margin: 0.5rem 0; color: #666; font-size: 0.9rem;">
-                                RSI: {trade.get('rsi', 0):.1f} • Volume: {trade.get('volume_ratio', 1):.2f}x
+                            <p style="margin: 0; color: #666; font-size: 0.9rem;">
+                                {reason}
                             </p>
                         </div>
+                        <div style="flex: 1; text-align: right;">
+                            <small style="color: #666;">{signal['timestamp'][11:19]} UTC</small>
+                        </div>
                     </div>
-                    ''', unsafe_allow_html=True)
-        
-        # Download JSON button
-        json_data = json.dumps(st.session_state.altcoin_signals, indent=2)
-        st.download_button(
-            label="📥 Download Live Signals JSON",
-            data=json_data,
-            file_name=f"live_altcoin_signals_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
-            mime="application/json",
-            use_container_width=True
-        )
-        
+                </div>
+                ''', unsafe_allow_html=True)
+            
+            # BEST TRADES FROM BITNODE MOVEMENT
+            st.markdown('<div style="margin-top: 2rem;"></div>', unsafe_allow_html=True)
+            st.markdown('<h3 style="color: #00ffff; font-family: Orbitron; text-align: center;">🏆 STRONGEST BITNODE SIGNALS</h3>', unsafe_allow_html=True)
+            
+            high_confidence_trades = [s for s in sorted_signals if s['confidence'] == 'High']
+            if high_confidence_trades:
+                best_trades = high_confidence_trades[:3]
+                
+                cols = st.columns(3)
+                for i, (trade, col) in enumerate(zip(best_trades, cols)):
+                    with col:
+                        medal = "🥇" if i == 0 else "🥈" if i == 1 else "🥉"
+                        if trade['signal'] == 'BUY':
+                            color = "#00ff7f"
+                            direction = "BULLISH"
+                        else:
+                            color = "#ff007f"
+                            direction = "BEARISH"
+                        
+                        st.markdown(f'''
+                        <div class="cyber-card">
+                            <div style="text-align: center;">
+                                <h2 style="margin: 0; color: {color}; font-family: Orbitron;">
+                                    {medal} {trade['coin']}
+                                </h2>
+                                <p style="margin: 0.5rem 0; color: #8892b0; font-size: 1.2rem;">
+                                    <strong>{trade['signal']}</strong> • <span style="color: #00ff7f;">{trade['confidence']}</span>
+                                </p>
+                                <p style="margin: 0; color: #ffffff; font-size: 1.1rem;">
+                                    ${trade['current_price']:,.2f}
+                                </p>
+                                <p style="margin: 0.5rem 0; color: #666; font-size: 0.9rem;">
+                                    {direction} BITNODE MOVEMENT
+                                </p>
+                            </div>
+                        </div>
+                        ''', unsafe_allow_html=True)
+            
+            # Download JSON button
+            json_data = json.dumps(sorted_signals, indent=2)
+            st.download_button(
+                label="📥 Download Bitnode Signals JSON",
+                data=json_data,
+                file_name=f"bitnode_signals_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
+                mime="application/json",
+                use_container_width=True
+            )
+        else:
+            st.info("🎯 Bitnode movement detected, but confidence is low. Waiting for stronger signals...")
     else:
-        st.info("🎯 Scanning 7 major altcoins in real-time... Signals will appear when Bitcoin direction is confirmed.")
+        st.info("🎯 Monitoring Bitcoin network movement... Signals will appear when Bitnode detects strong direction.")
         
-        # Show real-time monitoring status
+        # Show what we're monitoring
         st.markdown('<div class="cyber-card">', unsafe_allow_html=True)
-        st.markdown('<h3 style="color: #00ffff; font-family: Orbitron; text-align: center;">🔄 LIVE MONITORING ACTIVE</h3>', unsafe_allow_html=True)
+        st.markdown('<h3 style="color: #00ffff; font-family: Orbitron; text-align: center;">🔄 BITNODE MONITORING ACTIVE</h3>', unsafe_allow_html=True)
         
-        # Show current status of each coin
         st.markdown('<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; text-align: center;">', unsafe_allow_html=True)
         for coin in altcoin_generator.coin_pairs:
-            price = data_fetcher.get_binance_price(coin.replace("/", ""))
-            if price:
-                status = "🟢 LIVE"
-                price_text = f"${price:,.2f}"
-            else:
-                status = "🟡 LOADING"
-                price_text = "..."
-            
             st.markdown(f'''
             <div class="cyber-card">
                 <div style="text-align: center;">
                     <h4 style="margin: 0; color: #00ffff;">{coin}</h4>
-                    <p style="margin: 0.5rem 0; color: #8892b0;">{price_text}</p>
-                    <p style="margin: 0; color: #00ff7f;">{status}</p>
+                    <p style="margin: 0.5rem 0; color: #8892b0;">Waiting for Bitnode</p>
+                    <p style="margin: 0; color: #ffd700;">READY</p>
                 </div>
             </div>
             ''', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
     
-    # REAL-TIME DATA SOURCES
+    # BITNODE FORMULA EXPLANATION
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-    with st.expander("🔍 LIVE DATA SOURCES & TECHNICALS", expanded=False):
+    with st.expander("🔍 PURE BITNODE FORMULA", expanded=False):
         st.markdown("""
         <div style="font-family: Rajdhani; color: #ffffff;">
-        <h3 style="color: #00ffff; font-family: Orbitron;">📡 REAL-TIME DATA FEEDS</h3>
+        <h3 style="color: #00ffff; font-family: Orbitron;">🎯 ABDULLAH'S BITNODE FORMULA</h3>
         
-        <h4 style="color: #ff00ff; margin-top: 1rem;">APIS INTEGRATED:</h4>
+        <h4 style="color: #ff00ff; margin-top: 1rem;">CORE PRINCIPLE:</h4>
         <ul>
-            <li><strong>Binance Spot API</strong> - Live prices & historical data</li>
-            <li><strong>Binance Futures API</strong> - Funding rates</li>
-            <li><strong>Bitnodes API</strong> - Bitcoin network metrics</li>
-            <li><strong>CoinGecko API</strong> - Fallback price data</li>
+            <li><strong>Network Growth</strong> = More adoption = BULLISH</li>
+            <li><strong>Network Shrinkage</strong> = Less adoption = BEARISH</li>
+            <li><strong>Low Tor Usage</strong> = Open participation = BULLISH</li>
+            <li><strong>High Tor Usage</strong> = Privacy concerns = BEARISH</li>
         </ul>
         
-        <h4 style="color: #00ff7f; margin-top: 1rem;">TECHNICAL INDICATORS:</h4>
+        <h4 style="color: #00ff7f; margin-top: 1rem;">TRADING SIGNALS:</h4>
         <ul>
-            <li><strong>EMA Crossovers</strong> (20/50 period)</li>
-            <li><strong>RSI Momentum</strong> (14 period)</li>
-            <li><strong>MACD</strong> Trend analysis</li>
-            <li><strong>Volume Analysis</strong> (current vs average)</li>
-            <li><strong>Funding Rates</strong> Market sentiment</li>
+            <li><strong>BUY SIGNAL</strong>: Network Growing + Tor < 5%</li>
+            <li><strong>SELL SIGNAL</strong>: Network Shrinking + Tor > 5%</li>
+            <li><strong>NEUTRAL</strong>: Mixed or weak signals</li>
         </ul>
         
-        <h4 style="color: #ffd700; margin-top: 1rem;">REFRESH RATES:</h4>
+        <h4 style="color: #ffd700; margin-top: 1rem;">ALTCOIN FILTER:</h4>
         <ul>
-            <li><strong>Bitcoin Price</strong>: Every 2 minutes</li>
-            <li><strong>Altcoin Signals</strong>: Every 5 minutes</li>
-            <li><strong>Node Data</strong>: Every 30 minutes</li>
-            <li><strong>Technical Analysis</strong>: Real-time calculation</li>
+            <li><strong>7 Major Altcoins</strong> that follow Bitcoin direction</li>
+            <li><strong>No Technical Analysis</strong> - Pure network movement</li>
+            <li><strong>Real-time Prices</strong> from Binance API</li>
+            <li><strong>Confidence Levels</strong> based on signal strength</li>
+        </ul>
+        
+        <h4 style="color: #00ffff; margin-top: 1rem;">DATA SOURCES:</h4>
+        <ul>
+            <li><strong>Bitnodes.io</strong> - Bitcoin network metrics</li>
+            <li><strong>Binance API</strong> - Real-time prices</li>
+            <li><strong>Live Calculation</strong> - Network trends</li>
         </ul>
         </div>
         """, unsafe_allow_html=True)
@@ -934,22 +777,11 @@ def main():
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
     st.markdown("""
     <div class="trademark">
-    <p>⚡ REAL-TIME BITNODE ALTCOIN FILTER SYSTEM ⚡</p>
-    <p>© 2025 ABDULLAH'S PROPRIETARY ALGORITHM • LIVE TRADING SIGNALS</p>
-    <p style="font-size: 0.7rem; color: #556699;">BINANCE API • BITNODES.IO • TECHNICAL ANALYSIS • AUTO-REFRESH</p>
+    <p>⚡ PURE BITNODE ALTCOIN FILTER SYSTEM ⚡</p>
+    <p>© 2025 ABDULLAH'S PROPRIETARY FORMULA • NETWORK MOVEMENT ONLY</p>
+    <p style="font-size: 0.7rem; color: #556699;">NO TECHNICAL ANALYSIS • PURE BITCOIN NETWORK SIGNALS • AUTO-REFRESH</p>
     </div>
     """, unsafe_allow_html=True)
-    
-    # Auto-refresh JavaScript for real-time experience
-    refresh_js = """
-    <script>
-        // Keep the connection alive and refresh data
-        setTimeout(function() {
-            window.location.reload();
-        }, 300000); // 5 minutes
-    </script>
-    """
-    st.components.v1.html(refresh_js, height=0)
 
 if __name__ == "__main__":
     main()
