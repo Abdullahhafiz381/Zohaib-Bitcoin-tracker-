@@ -9,7 +9,7 @@ import plotly.express as px
 
 # Futuristic Streamlit setup
 st.set_page_config(
-    page_title="🚀 Abdullah's Bitcoin Tracker",
+    page_title="🚀 Abdullah's Crypto Tracker",
     page_icon="₿",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -182,6 +182,21 @@ st.markdown("""
         100% { opacity: 1; }
     }
     
+    .coin-card {
+        background: rgba(20, 25, 45, 0.9);
+        border: 1px solid rgba(0, 255, 255, 0.2);
+        border-radius: 12px;
+        padding: 1rem;
+        margin: 0.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .coin-card:hover {
+        border-color: #00ffff;
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        transform: translateY(-3px);
+    }
+    
     /* Custom metric styling */
     [data-testid="stMetricValue"] {
         font-family: 'Orbitron', monospace;
@@ -195,32 +210,58 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-def get_btc_price():
-    """Get BTC price from multiple sources with fallback"""
+def get_crypto_prices():
+    """Get crypto prices from multiple sources with fallback"""
+    coins = {
+        'BTCUSDT': 'bitcoin',
+        'ETHUSDT': 'ethereum', 
+        'LTCUSDT': 'litecoin',
+        'BCHUSDT': 'bitcoin-cash',
+        'SOLUSDT': 'solana',
+        'ADAUSDT': 'cardano',
+        'AVAXUSDT': 'avalanche-2',
+        'DOGEUSDT': 'dogecoin',
+        'DOTUSDT': 'polkadot',
+        'LINKUSDT': 'chainlink',
+        'BNBUSDT': 'binancecoin'
+    }
+    
+    prices = {}
+    
     try:
-        # Try Binance first
-        response = requests.get("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT", timeout=5)
-        response.raise_for_status()
-        return float(response.json()['price'])
-    except:
-        try:
-            # Fallback to CoinGecko
-            response = requests.get("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd", timeout=5)
-            response.raise_for_status()
-            return float(response.json()['bitcoin']['usd'])
-        except:
+        # Try Binance first for all coins
+        for symbol in coins.keys():
             try:
-                # Final fallback to Coinbase
-                response = requests.get("https://api.coinbase.com/v2/prices/BTC-USD/spot", timeout=5)
+                response = requests.get(f"https://api.binance.com/api/v3/ticker/price?symbol={symbol}", timeout=5)
                 response.raise_for_status()
-                return float(response.json()['data']['amount'])
+                prices[symbol] = float(response.json()['price'])
             except:
-                return None
+                prices[symbol] = None
+        
+        # Fill missing prices with CoinGecko
+        missing_coins = [coin_id for symbol, coin_id in coins.items() if prices.get(symbol) is None]
+        if missing_coins:
+            try:
+                coin_ids = ','.join(missing_coins)
+                response = requests.get(f"https://api.coingecko.com/api/v3/simple/price?ids={coin_ids}&vs_currencies=usd", timeout=5)
+                response.raise_for_status()
+                gecko_data = response.json()
+                
+                for symbol, coin_id in coins.items():
+                    if prices.get(symbol) is None and coin_id in gecko_data:
+                        prices[symbol] = float(gecko_data[coin_id]['usd'])
+            except:
+                pass
+                
+    except Exception as e:
+        st.error(f"Error fetching prices: {e}")
+    
+    return prices
 
-class BitcoinNodeAnalyzer:
+class CryptoAnalyzer:
     def __init__(self, data_file="network_data.json"):
         self.data_file = data_file
-        self.bitnodes_api ="https://bitnodes.io/api/v1/snapshots/latest/"
+        self.bitnodes_api = "https://bitnodes.io/api/v1/snapshots/latest/"
         self.load_historical_data()
     
     def load_historical_data(self):
@@ -284,15 +325,13 @@ class BitcoinNodeAnalyzer:
         if len(self.historical_data) < 2:
             return None
         
-        # Get yesterday's data (look for data from ~24 hours ago)
         current_time = datetime.now()
         target_time = current_time - timedelta(hours=24)
         
-        # Find the closest snapshot to 24 hours ago
         closest_snapshot = None
         min_time_diff = float('inf')
         
-        for snapshot in self.historical_data[:-1]:  # Exclude current
+        for snapshot in self.historical_data[:-1]:
             try:
                 snapshot_time = datetime.fromisoformat(snapshot['timestamp'])
                 time_diff = abs((snapshot_time - target_time).total_seconds())
@@ -310,15 +349,13 @@ class BitcoinNodeAnalyzer:
         if len(self.historical_data) < 2:
             return None
         
-        # Get yesterday's data (look for data from ~24 hours ago)
         current_time = datetime.now()
         target_time = current_time - timedelta(hours=24)
         
-        # Find the closest snapshot to 24 hours ago
         closest_snapshot = None
         min_time_diff = float('inf')
         
-        for snapshot in self.historical_data[:-1]:  # Exclude current
+        for snapshot in self.historical_data[:-1]:
             try:
                 snapshot_time = datetime.fromisoformat(snapshot['timestamp'])
                 time_diff = abs((snapshot_time - target_time).total_seconds())
@@ -380,11 +417,11 @@ class BitcoinNodeAnalyzer:
                 'bias': "INSUFFICIENT_DATA"
             }
         
-        # Calculate Tor Trend using your formula
+        # Calculate Tor Trend
         tor_trend = (current_tor_percentage - previous_tor_percentage) / previous_tor_percentage
         
-        # Determine market bias based on your rules
-        if tor_trend > 0.001:  # Small threshold to account for minor fluctuations
+        # Determine market bias
+        if tor_trend > 0.001:
             bias = "BEARISH (Sell Bias)"
         elif tor_trend < -0.001:
             bias = "BULLISH (Buy Bias)"
@@ -394,7 +431,7 @@ class BitcoinNodeAnalyzer:
         return {
             'previous_tor': round(previous_tor_percentage, 2),
             'current_tor': round(current_tor_percentage, 2),
-            'tor_trend': round(tor_trend * 100, 2),  # Convert to percentage
+            'tor_trend': round(tor_trend * 100, 2),
             'bias': bias
         }
     
@@ -423,7 +460,7 @@ class BitcoinNodeAnalyzer:
         dates = []
         tor_percentages = []
         
-        for entry in self.historical_data[-24:]:  # Last 24 data points
+        for entry in self.historical_data[-24:]:
             try:
                 date = datetime.fromisoformat(entry['timestamp']).strftime('%H:%M')
                 dates.append(date)
@@ -472,49 +509,108 @@ class BitcoinNodeAnalyzer:
         
         return fig
 
+def get_coin_display_name(symbol):
+    """Get display name for crypto symbols"""
+    names = {
+        'BTCUSDT': 'Bitcoin',
+        'ETHUSDT': 'Ethereum',
+        'LTCUSDT': 'Litecoin',
+        'BCHUSDT': 'Bitcoin Cash',
+        'SOLUSDT': 'Solana',
+        'ADAUSDT': 'Cardano',
+        'AVAXUSDT': 'Avalanche',
+        'DOGEUSDT': 'Dogecoin',
+        'DOTUSDT': 'Polkadot',
+        'LINKUSDT': 'Chainlink',
+        'BNBUSDT': 'Binance Coin'
+    }
+    return names.get(symbol, symbol)
+
+def get_coin_emoji(symbol):
+    """Get emoji for crypto symbols"""
+    emojis = {
+        'BTCUSDT': '₿',
+        'ETHUSDT': '🔷',
+        'LTCUSDT': '🔶',
+        'BCHUSDT': '💰',
+        'SOLUSDT': '🔥',
+        'ADAUSDT': '🔰',
+        'AVAXUSDT': '❄️',
+        'DOGEUSDT': '🐕',
+        'DOTUSDT': '🔴',
+        'LINKUSDT': '🔗',
+        'BNBUSDT': '💎'
+    }
+    return emojis.get(symbol, '⚡')
+
 def main():
     # Initialize analyzer
-    analyzer = BitcoinNodeAnalyzer()
+    analyzer = CryptoAnalyzer()
     
     # Futuristic Header
-    st.markdown('<h1 class="cyber-header">🚀 ABDULLAH\'S BITCOIN TRACKER</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="cyber-subheader">TOR NODE TREND ANALYZER • NETWORK SIGNALS • LIVE PRICE</p>', unsafe_allow_html=True)
+    st.markdown('<h1 class="cyber-header">🚀 ABDULLAH\'S CRYPTO TRACKER</h1>', unsafe_allow_html=True)
+    st.markdown('<p class="cyber-subheader">TOR NODE TREND ANALYZER • MULTI-COIN SIGNALS • LIVE PRICES</p>', unsafe_allow_html=True)
     
-    # LIVE BTC PRICE SECTION
+    # LIVE CRYPTO PRICES SECTION
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-    st.markdown('<h2 class="section-header">💰 LIVE BTC PRICE</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-header">💰 LIVE CRYPTO PRICES</h2>', unsafe_allow_html=True)
     
-    # Get BTC price automatically
-    btc_price = get_btc_price()
+    # Get all crypto prices
+    prices = get_crypto_prices()
     
-    if btc_price:
-        # Display price in a futuristic glowing box
-        st.markdown('<div class="price-glow">', unsafe_allow_html=True)
+    if prices:
+        # Display BTC price prominently
+        btc_price = prices.get('BTCUSDT')
+        if btc_price:
+            st.markdown('<div class="price-glow">', unsafe_allow_html=True)
+            col1, col2, col3 = st.columns([2, 1, 1])
+            
+            with col1:
+                st.markdown(f'<div style="text-align: center;"><span style="font-family: Orbitron; font-size: 3rem; font-weight: 900; background: linear-gradient(90deg, #00ffff, #ff00ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">${btc_price:,.2f}</span></div>', unsafe_allow_html=True)
+                st.markdown('<p style="text-align: center; color: #8892b0; font-family: Rajdhani;">BITCOIN PRICE (USD)</p>', unsafe_allow_html=True)
+            
+            with col2:
+                st.metric(
+                    label="24H STATUS",
+                    value="🟢 LIVE",
+                    delta="ACTIVE"
+                )
+            
+            with col3:
+                st.metric(
+                    label="DATA SOURCE", 
+                    value="BINANCE API",
+                    delta="PRIMARY"
+                )
+            
+            st.markdown('</div>', unsafe_allow_html=True)
         
-        col1, col2, col3 = st.columns([2, 1, 1])
+        # Display all coins in a grid
+        st.markdown('<h3 style="font-family: Orbitron; color: #00ffff; margin: 1rem 0;">📊 ALTCOIN MARKET</h3>', unsafe_allow_html=True)
         
-        with col1:
-            st.markdown(f'<div style="text-align: center;"><span style="font-family: Orbitron; font-size: 3rem; font-weight: 900; background: linear-gradient(90deg, #00ffff, #ff00ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">${btc_price:,.2f}</span></div>', unsafe_allow_html=True)
-            st.markdown('<p style="text-align: center; color: #8892b0; font-family: Rajdhani;">BITCOIN PRICE (USD)</p>', unsafe_allow_html=True)
+        # Create columns for coin grid
+        coins_to_display = {k: v for k, v in prices.items() if k != 'BTCUSDT'}
+        cols = st.columns(4)
         
-        with col2:
-            st.metric(
-                label="24H STATUS",
-                value="🟢 LIVE",
-                delta="ACTIVE"
-            )
+        for idx, (symbol, price) in enumerate(coins_to_display.items()):
+            if price:
+                with cols[idx % 4]:
+                    emoji = get_coin_emoji(symbol)
+                    name = get_coin_display_name(symbol)
+                    
+                    st.markdown(f'''
+                    <div class="coin-card">
+                        <div style="text-align: center;">
+                            <h4 style="font-family: Orbitron; color: #00ffff; margin: 0.5rem 0; font-size: 1.1rem;">{emoji} {name}</h4>
+                            <p style="font-family: Orbitron; font-size: 1.3rem; font-weight: 700; color: #ffffff; margin: 0.5rem 0;">${price:,.2f}</p>
+                            <p style="color: #8892b0; font-family: Rajdhani; font-size: 0.9rem; margin: 0;">{symbol}</p>
+                        </div>
+                    </div>
+                    ''', unsafe_allow_html=True)
         
-        with col3:
-            st.metric(
-                label="DATA SOURCE", 
-                value="BINANCE API",
-                delta="PRIMARY"
-            )
-        
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown(f'<p style="text-align: center; color: #8892b0; font-family: Rajdhani;">🕒 Price updated: {datetime.now().strftime("%H:%M:%S")}</p>', unsafe_allow_html=True)
+        st.markdown(f'<p style="text-align: center; color: #8892b0; font-family: Rajdhani;">🕒 Prices updated: {datetime.now().strftime("%H:%M:%S")}</p>', unsafe_allow_html=True)
     else:
-        st.error("❌ Could not fetch BTC price")
+        st.error("❌ Could not fetch crypto prices")
     
     # Refresh button for node data
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
@@ -619,6 +715,55 @@ def main():
             st.markdown(f'<h3 style="font-family: Orbitron; text-align: center; margin: 0;">🎯 {signal_text} SIGNAL {emoji}</h3>', unsafe_allow_html=True)
             st.markdown('</div>', unsafe_allow_html=True)
     
+    # MULTI-COIN SIGNALS BASED ON TOR TREND
+    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-header">🎯 MULTI-COIN TOR SIGNALS</h2>', unsafe_allow_html=True)
+    
+    if len(analyzer.historical_data) > 0:
+        current_data = analyzer.historical_data[-1]
+        tor_trend_data = analyzer.calculate_tor_trend(current_data['tor_percentage'])
+        
+        # Apply Tor trend analysis to all coins
+        coins_list = [
+            'BTCUSDT', 'ETHUSDT', 'LTCUSDT', 'BCHUSDT', 'SOLUSDT', 
+            'ADAUSDT', 'AVAXUSDT', 'DOGEUSDT', 'DOTUSDT', 'LINKUSDT', 'BNBUSDT'
+        ]
+        
+        # Create columns for coin signals
+        signal_cols = st.columns(4)
+        
+        for idx, symbol in enumerate(coins_list):
+            if prices.get(symbol):
+                with signal_cols[idx % 4]:
+                    emoji = get_coin_emoji(symbol)
+                    name = get_coin_display_name(symbol)
+                    price = prices[symbol]
+                    
+                    # Apply the same Tor trend signal to all coins
+                    if tor_trend_data['bias'] == "BEARISH (Sell Bias)":
+                        signal_class = "signal-sell"
+                        signal_text = "SELL"
+                        signal_emoji = "🔴"
+                    elif tor_trend_data['bias'] == "BULLISH (Buy Bias)":
+                        signal_class = "signal-buy"
+                        signal_text = "BUY"
+                        signal_emoji = "🟢"
+                    else:
+                        signal_class = "signal-neutral"
+                        signal_text = "HOLD"
+                        signal_emoji = "🟡"
+                    
+                    st.markdown(f'''
+                    <div class="{signal_class}" style="padding: 1rem; margin: 0.5rem 0;">
+                        <div style="text-align: center;">
+                            <h4 style="font-family: Orbitron; margin: 0.5rem 0; font-size: 1.1rem;">{emoji} {name}</h4>
+                            <p style="font-family: Orbitron; font-size: 1.2rem; font-weight: 700; margin: 0.5rem 0;">${price:,.2f}</p>
+                            <p style="font-family: Orbitron; font-size: 1rem; margin: 0.5rem 0;">{signal_emoji} {signal_text}</p>
+                            <p style="color: #8892b0; font-family: Rajdhani; font-size: 0.8rem; margin: 0;">Tor Trend: {tor_trend_data['tor_trend']:+.2f}%</p>
+                        </div>
+                    </div>
+                    ''', unsafe_allow_html=True)
+    
     # TOR TREND CHART
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
     st.markdown('<h2 class="section-header">📊 TOR TREND CHART</h2>', unsafe_allow_html=True)
@@ -682,16 +827,30 @@ def main():
     
     else:
         st.info("📱 Tap 'UPDATE NODE DATA' above to load network analysis!")
-
+    
+     # Auto-refresh suggestion
+    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class="cyber-card">
+    <h3 style="font-family: Orbitron; color: #00ffff; text-align: center;">💡 PRO TIPS</h3>
+    <p style="text-align: center; color: #8892b0; font-family: Rajdhani;">
+    Crypto prices update automatically every time you load the page.<br>
+    Node data updates when you click the UPDATE NODE DATA button.<br>
+    All coin signals are based on Bitcoin Tor trend analysis.
+    </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
     # Abdullah's Futuristic Trademark Footer
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
     st.markdown("""
     <div class="trademark">
-    <p>⚡ CYBER BITCOIN ANALYTICS PLATFORM ⚡</p>
-    <p>© 2025 ABDULLAH'S BITCOIN TRACKER • TOR NODE TREND ANALYZER</p>
-    <p style="font-size: 0.7rem; color: #556699;">BUILT WITH STREAMLIT • POWERED BY BITNODES API</p>
+    <p>⚡ CYBER CRYPTO ANALYTICS PLATFORM ⚡</p>
+    <p>© 2025 ABDULLAH'S CRYPTO TRACKER • MULTI-COIN TOR TREND ANALYZER</p>
+    <p style="font-size: 0.7rem; color: #556699;">BUILT WITH STREAMLIT • POWERED BY BINANCE & BITNODES API</p>
     </div>
     """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
+               
