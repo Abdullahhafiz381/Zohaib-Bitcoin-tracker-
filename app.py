@@ -6,6 +6,7 @@ import os
 from datetime import datetime, timedelta
 import plotly.graph_objects as go
 import plotly.express as px
+import time
 
 # Futuristic Streamlit setup
 st.set_page_config(
@@ -182,6 +183,16 @@ st.markdown("""
         100% { opacity: 1; }
     }
     
+    .auto-refresh-status {
+        background: linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 140, 0, 0.3) 100%);
+        border: 1px solid #ffd700;
+        border-radius: 10px;
+        padding: 0.5rem 1rem;
+        margin: 0.5rem 0;
+        text-align: center;
+        font-family: 'Orbitron', monospace;
+    }
+    
     /* Custom metric styling */
     [data-testid="stMetricValue"] {
         font-family: 'Orbitron', monospace;
@@ -191,6 +202,17 @@ st.markdown("""
     [data-testid="stMetricLabel"] {
         font-family: 'Rajdhani', sans-serif;
         font-weight: 600;
+    }
+    
+    /* Refresh animation */
+    .refreshing {
+        animation: refreshing 1.5s infinite;
+    }
+    
+    @keyframes refreshing {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -476,9 +498,78 @@ def main():
     # Initialize analyzer
     analyzer = BitcoinNodeAnalyzer()
     
+    # Auto-refresh functionality
+    if 'last_refresh' not in st.session_state:
+        st.session_state.last_refresh = datetime.now()
+    
+    if 'auto_refresh' not in st.session_state:
+        st.session_state.auto_refresh = True
+    
+    # Check if 30 minutes have passed since last refresh
+    current_time = datetime.now()
+    time_since_refresh = current_time - st.session_state.last_refresh
+    refresh_interval = timedelta(minutes=30)
+    
+    # Auto-refresh logic
+    if st.session_state.auto_refresh and time_since_refresh > refresh_interval:
+        with st.spinner("🔄 Auto-updating all data..."):
+            if analyzer.update_network_data():
+                st.session_state.last_refresh = current_time
+                st.rerun()
+            else:
+                st.error("Auto-update failed, but will retry in 30 minutes")
+    
     # Futuristic Header
     st.markdown('<h1 class="cyber-header">🚀 ABDULLAH\'S BITCOIN TRACKER</h1>', unsafe_allow_html=True)
     st.markdown('<p class="cyber-subheader">TOR NODE TREND ANALYZER • NETWORK SIGNALS • LIVE PRICE</p>', unsafe_allow_html=True)
+    
+    # AUTO-REFRESH STATUS
+    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([2, 1, 1])
+    
+    with col1:
+        # Auto-refresh status
+        next_refresh = st.session_state.last_refresh + refresh_interval
+        time_until_refresh = next_refresh - current_time
+        minutes_until_refresh = max(0, int(time_until_refresh.total_seconds() // 60))
+        seconds_until_refresh = max(0, int(time_until_refresh.total_seconds() % 60))
+        
+        if st.session_state.auto_refresh:
+            status_emoji = "🟢"
+            status_text = "ACTIVE"
+        else:
+            status_emoji = "🔴"
+            status_text = "PAUSED"
+        
+        st.markdown(f'''
+        <div class="auto-refresh-status">
+            <div style="font-size: 1.2rem; margin-bottom: 0.5rem;">
+                {status_emoji} AUTO-REFRESH: {status_text}
+            </div>
+            <div style="font-size: 0.9rem; color: #ffd700;">
+                Next update in: {minutes_until_refresh:02d}:{seconds_until_refresh:02d}
+            </div>
+        </div>
+        ''', unsafe_allow_html=True)
+    
+    with col2:
+        # Toggle auto-refresh
+        if st.button("⏸️ PAUSE" if st.session_state.auto_refresh else "▶️ RESUME", 
+                    key="toggle_refresh", use_container_width=True):
+            st.session_state.auto_refresh = not st.session_state.auto_refresh
+            st.rerun()
+    
+    with col3:
+        # Manual refresh button
+        if st.button("🔄 UPDATE NOW", key="manual_refresh", use_container_width=True):
+            with st.spinner("🔄 Updating all data..."):
+                if analyzer.update_network_data():
+                    st.session_state.last_refresh = datetime.now()
+                    st.success("✅ All data updated successfully!")
+                    st.rerun()
+                else:
+                    st.error("❌ Update failed")
     
     # LIVE BTC PRICE SECTION
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
@@ -525,6 +616,7 @@ def main():
         if st.button("🔄 UPDATE NODE DATA", key="refresh_main", use_container_width=True):
             with st.spinner("🔍 Analyzing network data..."):
                 if analyzer.update_network_data():
+                    st.session_state.last_refresh = datetime.now()
                     st.success("✅ Node data updated successfully!")
                     st.rerun()
                 else:
@@ -683,14 +775,15 @@ def main():
     else:
         st.info("📱 Tap 'UPDATE NODE DATA' above to load network analysis!")
     
-    # PRO TIPS SECTION (Keeping this as it's useful for users)
+    # PRO TIPS SECTION
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
     st.markdown("""
     <div class="cyber-card">
     <h3 style="font-family: Orbitron; color: #00ffff; text-align: center;">💡 PRO TIPS</h3>
     <p style="text-align: center; color: #8892b0; font-family: Rajdhani;">
-    The BTC price updates automatically every time you load the page.<br>
-    Node data updates when you click the UPDATE NODE DATA button.
+    <strong>Auto-Refresh:</strong> Data updates automatically every 30 minutes<br>
+    <strong>Manual Control:</strong> Use PAUSE/RESUME to control auto-updates<br>
+    <strong>Instant Update:</strong> Click UPDATE NOW for immediate refresh
     </p>
     </div>
     """, unsafe_allow_html=True)
@@ -701,9 +794,25 @@ def main():
     <div class="trademark">
     <p>⚡ CYBER BITCOIN ANALYTICS PLATFORM ⚡</p>
     <p>© 2025 ABDULLAH'S BITCOIN TRACKER • PROPRIETARY ALGORITHM</p>
-    <p style="font-size: 0.7rem; color: #556699;">BUILT WITH STREAMLIT • POWERED BY BITNODES API</p>
+    <p style="font-size: 0.7rem; color: #556699;">BUILT WITH STREAMLIT • POWERED BY BITNODES API • AUTO-REFRESH ENABLED</p>
     </div>
     """, unsafe_allow_html=True)
+    
+    # Auto-refresh JavaScript (keeps the page alive and triggers reruns)
+    refresh_js = f"""
+    <script>
+        function checkRefresh() {{
+            // The page will automatically refresh when the 30-minute mark is reached
+            setTimeout(function() {{
+                window.location.reload();
+            }}, {30 * 60 * 1000}); // 30 minutes in milliseconds
+        }}
+        
+        // Start the refresh timer
+        checkRefresh();
+    </script>
+    """
+    st.components.v1.html(refresh_js, height=0)
 
 if __name__ == "__main__":
     main()
