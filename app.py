@@ -7,63 +7,190 @@ from datetime import datetime, timedelta
 import plotly.graph_objects as go
 import plotly.express as px
 
-# Mobile-friendly setup
+# Futuristic Streamlit setup
 st.set_page_config(
-    page_title="Zohaib's Bitcoin Tracker",
+    page_title="🚀 Abdullah's Bitcoin Tracker",
     page_icon="₿",
-    layout="centered",
+    layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# Mobile styling with Zohaib's trademark
+# Futuristic CSS with cyberpunk theme
 st.markdown("""
 <style>
-    .main > div {
-        padding: 0.5rem;
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
+    
+    .main {
+        background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+        color: #ffffff;
+        font-family: 'Rajdhani', sans-serif;
     }
-    .stMetric {
-        padding: 0.5rem;
+    
+    .stApp {
+        background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
     }
+    
+    .cyber-header {
+        background: linear-gradient(90deg, #00ffff 0%, #ff00ff 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-family: 'Orbitron', monospace;
+        font-weight: 900;
+        text-align: center;
+        font-size: 3.5rem;
+        margin-bottom: 0.5rem;
+        text-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+    }
+    
+    .cyber-subheader {
+        color: #8892b0;
+        font-family: 'Orbitron', monospace;
+        text-align: center;
+        font-size: 1.2rem;
+        margin-bottom: 2rem;
+        letter-spacing: 2px;
+    }
+    
+    .cyber-card {
+        background: rgba(10, 15, 35, 0.8);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(0, 255, 255, 0.3);
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin: 0.5rem 0;
+        box-shadow: 0 8px 32px rgba(0, 255, 255, 0.1);
+        transition: all 0.3s ease;
+    }
+    
+    .cyber-card:hover {
+        border-color: #00ffff;
+        box-shadow: 0 8px 32px rgba(0, 255, 255, 0.3);
+        transform: translateY(-2px);
+    }
+    
     .signal-buy {
-        background-color: #d4edda;
-        padding: 1rem;
-        border-radius: 0.5rem;
+        background: linear-gradient(135deg, rgba(0, 255, 127, 0.1) 0%, rgba(0, 100, 0, 0.3) 100%);
+        border: 1px solid #00ff7f;
+        border-radius: 12px;
+        padding: 1.5rem;
         margin: 0.5rem 0;
-        border-left: 4px solid #28a745;
+        box-shadow: 0 0 20px rgba(0, 255, 127, 0.3);
     }
+    
     .signal-sell {
-        background-color: #f8d7da;
-        padding: 1rem;
-        border-radius: 0.5rem;
+        background: linear-gradient(135deg, rgba(255, 0, 127, 0.1) 0%, rgba(100, 0, 0, 0.3) 100%);
+        border: 1px solid #ff007f;
+        border-radius: 12px;
+        padding: 1.5rem;
         margin: 0.5rem 0;
-        border-left: 4px solid #dc3545;
+        box-shadow: 0 0 20px rgba(255, 0, 127, 0.3);
     }
+    
     .signal-neutral {
-        background-color: #fff3cd;
-        padding: 1rem;
-        border-radius: 0.5rem;
+        background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(100, 100, 0, 0.3) 100%);
+        border: 1px solid #ffd700;
+        border-radius: 12px;
+        padding: 1.5rem;
         margin: 0.5rem 0;
-        border-left: 4px solid #ffc107;
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
     }
+    
+    .price-glow {
+        background: linear-gradient(135deg, rgba(0, 255, 255, 0.1) 0%, rgba(255, 0, 255, 0.1) 100%);
+        border: 1px solid rgba(0, 255, 255, 0.5);
+        border-radius: 15px;
+        padding: 2rem;
+        margin: 1rem 0;
+        box-shadow: 0 0 40px rgba(0, 255, 255, 0.2);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .price-glow::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(45deg, transparent, rgba(0, 255, 255, 0.1), transparent);
+        animation: shine 3s infinite linear;
+    }
+    
+    @keyframes shine {
+        0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+        100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+    }
+    
+    .cyber-button {
+        background: linear-gradient(90deg, #00ffff 0%, #ff00ff 100%);
+        border: none;
+        border-radius: 25px;
+        color: #000000;
+        font-family: 'Orbitron', monospace;
+        font-weight: 700;
+        padding: 0.75rem 2rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+    }
+    
+    .cyber-button:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0 30px rgba(255, 0, 255, 0.7);
+    }
+    
+    .metric-cyber {
+        background: rgba(0, 0, 0, 0.6);
+        border: 1px solid rgba(0, 255, 255, 0.2);
+        border-radius: 10px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+    }
+    
     .trademark {
         text-align: center;
-        color: #666;
-        font-size: 0.8rem;
-        margin-top: 1rem;
+        color: #8892b0;
+        font-family: 'Orbitron', monospace;
+        font-size: 0.9rem;
+        margin-top: 2rem;
+        letter-spacing: 1px;
     }
-    .feature-box {
-        background-color: #e7f3ff;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        margin: 0.5rem 0;
-        border-left: 4px solid #0d6efd;
+    
+    .section-header {
+        font-family: 'Orbitron', monospace;
+        font-size: 1.8rem;
+        background: linear-gradient(90deg, #00ffff 0%, #ff00ff 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin: 2rem 0 1rem 0;
+        text-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
     }
-    .price-box {
-        background-color: #f8f9fa;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        margin: 0.5rem 0;
-        border: 2px solid #e9ecef;
+    
+    .divider {
+        height: 2px;
+        background: linear-gradient(90deg, transparent 0%, #00ffff 50%, transparent 100%);
+        margin: 2rem 0;
+    }
+    
+    .pulse {
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.7; }
+        100% { opacity: 1; }
+    }
+    
+    /* Custom metric styling */
+    [data-testid="stMetricValue"] {
+        font-family: 'Orbitron', monospace;
+        font-weight: 700;
+    }
+    
+    [data-testid="stMetricLabel"] {
+        font-family: 'Rajdhani', sans-serif;
+        font-weight: 600;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -307,7 +434,7 @@ class BitcoinNodeAnalyzer:
         if len(dates) < 2:
             return None
         
-        # Create plot
+        # Create futuristic plot
         fig = go.Figure()
         
         fig.add_trace(go.Scatter(
@@ -315,17 +442,32 @@ class BitcoinNodeAnalyzer:
             y=tor_percentages,
             mode='lines+markers',
             name='Tor %',
-            line=dict(color='#FF6B6B', width=3),
-            marker=dict(size=6)
+            line=dict(color='#00ffff', width=4, shape='spline'),
+            marker=dict(size=8, color='#ff00ff', line=dict(width=2, color='#ffffff')),
+            fill='tozeroy',
+            fillcolor='rgba(0, 255, 255, 0.1)'
         ))
         
         fig.update_layout(
-            title="Tor Percentage Trend (Last 24 Hours)",
-            xaxis_title="Time",
-            yaxis_title="Tor Percentage (%)",
-            height=300,
-            showlegend=True,
-            template="plotly_white"
+            title=dict(
+                text="🕵️ Tor Percentage Trend (Last 24 Hours)",
+                font=dict(family='Orbitron', size=20, color='#ffffff')
+            ),
+            xaxis=dict(
+                title="Time",
+                gridcolor='rgba(0, 255, 255, 0.1)',
+                tickfont=dict(family='Rajdhani', color='#8892b0')
+            ),
+            yaxis=dict(
+                title="Tor Percentage (%)",
+                gridcolor='rgba(0, 255, 255, 0.1)',
+                tickfont=dict(family='Rajdhani', color='#8892b0')
+            ),
+            plot_bgcolor='rgba(10, 15, 35, 0.5)',
+            paper_bgcolor='rgba(0, 0, 0, 0)',
+            font=dict(color='#ffffff'),
+            height=400,
+            showlegend=True
         )
         
         return fig
@@ -334,227 +476,234 @@ def main():
     # Initialize analyzer
     analyzer = BitcoinNodeAnalyzer()
     
-    # Header with Zohaib's trademark
-    st.title("₿ Zohaib's Bitcoin Tracker")
-    st.markdown("Tor Node Trend Analyzer • Network Signals • Live Price")
+    # Futuristic Header
+    st.markdown('<h1 class="cyber-header">🚀 ABDULLAH\'S BITCOIN TRACKER</h1>', unsafe_allow_html=True)
+    st.markdown('<p class="cyber-subheader">TOR NODE TREND ANALYZER • NETWORK SIGNALS • LIVE PRICE</p>', unsafe_allow_html=True)
     
-    # ALWAYS SHOW BTC PRICE - No button needed
-    st.markdown("---")
-    st.subheader("💰 Live BTC Price")
+    # LIVE BTC PRICE SECTION
+    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-header">💰 LIVE BTC PRICE</h2>', unsafe_allow_html=True)
     
-    # Get BTC price automatically (no button required)
+    # Get BTC price automatically
     btc_price = get_btc_price()
     
     if btc_price:
-        # Display price in a nice box
-        st.markdown('<div class="price-box">', unsafe_allow_html=True)
+        # Display price in a futuristic glowing box
+        st.markdown('<div class="price-glow">', unsafe_allow_html=True)
         
         col1, col2, col3 = st.columns([2, 1, 1])
         
         with col1:
-            st.metric(
-                label="Bitcoin Price (USD)",
-                value=f"${btc_price:,.2f}",
-                delta=None
-            )
+            st.markdown(f'<div style="text-align: center;"><span style="font-family: Orbitron; font-size: 3rem; font-weight: 900; background: linear-gradient(90deg, #00ffff, #ff00ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">${btc_price:,.2f}</span></div>', unsafe_allow_html=True)
+            st.markdown('<p style="text-align: center; color: #8892b0; font-family: Rajdhani;">BITCOIN PRICE (USD)</p>', unsafe_allow_html=True)
         
         with col2:
             st.metric(
-                label="24h Change",
-                value="Live",  # You can add actual 24h change if needed
-                delta=None
+                label="24H STATUS",
+                value="🟢 LIVE",
+                delta="ACTIVE"
             )
         
         with col3:
             st.metric(
-                label="Status", 
-                value="🟢 Live",
-                delta=None
+                label="DATA SOURCE", 
+                value="BINANCE API",
+                delta="PRIMARY"
             )
         
         st.markdown('</div>', unsafe_allow_html=True)
-        st.caption(f"🕒 Price updated: {datetime.now().strftime('%H:%M:%S')}")
+        st.markdown(f'<p style="text-align: center; color: #8892b0; font-family: Rajdhani;">🕒 Price updated: {datetime.now().strftime("%H:%M:%S")}</p>', unsafe_allow_html=True)
     else:
         st.error("❌ Could not fetch BTC price")
     
-    # Refresh button for node data only
-    st.markdown("---")
+    # Refresh button for node data
+    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
     col1, col2 = st.columns([3, 1])
     with col1:
-        st.subheader("📊 Network Analysis")
+        st.markdown('<h2 class="section-header">📊 NETWORK ANALYSIS</h2>', unsafe_allow_html=True)
     with col2:
-        if st.button("🔄 Update Node Data", key="refresh_main"):
-            with st.spinner("Analyzing network data..."):
+        if st.button("🔄 UPDATE NODE DATA", key="refresh_main", use_container_width=True):
+            with st.spinner("🔍 Analyzing network data..."):
                 if analyzer.update_network_data():
-                    st.success("Node data updated!")
+                    st.success("✅ Node data updated successfully!")
                     st.rerun()
                 else:
-                    st.error("Node data update failed")
+                    st.error("❌ Node data update failed")
     
-    # Get current node data
+    # Main content in two columns for better mobile layout
+    col1, col2 = st.columns([1, 1])
+    
+    with col1:
+        # Get current node data
+        if len(analyzer.historical_data) > 0:
+            current_data = analyzer.historical_data[-1]
+            
+            # TOR TREND ANALYZER SECTION
+            st.markdown('<div class="cyber-card">', unsafe_allow_html=True)
+            st.markdown('<h3 style="font-family: Orbitron; color: #00ffff; text-align: center;">🕵️ TOR TREND ANALYZER</h3>', unsafe_allow_html=True)
+            
+            # Calculate Tor trend
+            tor_trend_data = analyzer.calculate_tor_trend(current_data['tor_percentage'])
+            
+            # Display Tor trend results in a grid
+            col1a, col2a, col3a = st.columns(3)
+            
+            with col1a:
+                st.metric("📊 PREVIOUS TOR %", f"{tor_trend_data['previous_tor']}%")
+            
+            with col2a:
+                st.metric("🎯 CURRENT TOR %", f"{tor_trend_data['current_tor']}%")
+            
+            with col3a:
+                trend_value = tor_trend_data['tor_trend']
+                st.metric("📈 TOR TREND", f"{trend_value:+.2f}%")
+            
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+            # Display market bias with cyber styling
+            if tor_trend_data['bias'] == "BEARISH (Sell Bias)":
+                bias_class = "signal-sell"
+                emoji = "📉"
+                bias_text = "SELL BIAS"
+            elif tor_trend_data['bias'] == "BULLISH (Buy Bias)":
+                bias_class = "signal-buy"
+                emoji = "📈"
+                bias_text = "BUY BIAS"
+            else:
+                bias_class = "signal-neutral"
+                emoji = "➡️"
+                bias_text = "NEUTRAL"
+            
+            st.markdown(f'<div class="{bias_class}">', unsafe_allow_html=True)
+            st.markdown(f'<h3 style="font-family: Orbitron; text-align: center; margin: 0;">🚀 MARKET BIAS: {bias_text} {emoji}</h3>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+    
+    with col2:
+        if len(analyzer.historical_data) > 0:
+            # NETWORK TREND SIGNAL SECTION
+            st.markdown('<div class="cyber-card">', unsafe_allow_html=True)
+            st.markdown('<h3 style="font-family: Orbitron; color: #00ffff; text-align: center;">📈 NETWORK TREND SIGNAL</h3>', unsafe_allow_html=True)
+            
+            signal_data = analyzer.calculate_network_signal(current_data)
+            
+            # Display network metrics
+            col1b, col2b = st.columns(2)
+            
+            with col1b:
+                st.metric("🟢 ACTIVE NODES", f"{signal_data['active_nodes']:,}")
+                st.metric("📊 TOTAL NODES", f"{signal_data['total_nodes']:,}")
+                st.metric("🕒 PREVIOUS TOTAL", f"{signal_data['previous_total']:,}")
+            
+            with col2b:
+                st.metric("⚡ ACTIVE RATIO", f"{signal_data['active_ratio']:.4f}")
+                st.metric("📈 TREND", f"{signal_data['trend']:+.4f}")
+                st.metric("🎯 FINAL SIGNAL", f"{signal_data['signal']:+.4f}")
+            
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+            # Display signal with cyber styling
+            if signal_data['suggestion'] == "BUY":
+                signal_class = "signal-buy"
+                emoji = "🟢"
+                signal_text = "STRONG BUY"
+            elif signal_data['suggestion'] == "SELL":
+                signal_class = "signal-sell"
+                emoji = "🔴"
+                signal_text = "STRONG SELL"
+            else:
+                signal_class = "signal-neutral"
+                emoji = "🟡"
+                signal_text = "NEUTRAL"
+            
+            st.markdown(f'<div class="{signal_class}">', unsafe_allow_html=True)
+            st.markdown(f'<h3 style="font-family: Orbitron; text-align: center; margin: 0;">🎯 {signal_text} SIGNAL {emoji}</h3>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+    
+    # TOR TREND CHART
+    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-header">📊 TOR TREND CHART</h2>', unsafe_allow_html=True)
+    
+    tor_chart = analyzer.plot_tor_trend_chart()
+    if tor_chart:
+        st.plotly_chart(tor_chart, use_container_width=True, config={'displayModeBar': False})
+    else:
+        st.info("🔄 Collecting more data for chart...")
+    
+    # NETWORK HEALTH SUMMARY
     if len(analyzer.historical_data) > 0:
-        current_data = analyzer.historical_data[-1]
-        
-        # TOR TREND ANALYZER SECTION
-        st.markdown("---")
-        st.subheader("🕵️ Tor Node Trend Analyzer")
-        
-        # Calculate Tor trend
-        tor_trend_data = analyzer.calculate_tor_trend(current_data['tor_percentage'])
-        
-        # Display Tor trend results
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.metric("Previous Tor %", f"{tor_trend_data['previous_tor']}%")
-        
-        with col2:
-            st.metric("Current Tor %", f"{tor_trend_data['current_tor']}%")
-        
-        with col3:
-            trend_value = tor_trend_data['tor_trend']
-            st.metric("Tor Trend", f"{trend_value:+.2f}%")
-        
-        # Display market bias with color coding
-        if tor_trend_data['bias'] == "BEARISH (Sell Bias)":
-            bias_class = "signal-sell"
-            emoji = "📉"
-            bias_text = "SELL BIAS"
-        elif tor_trend_data['bias'] == "BULLISH (Buy Bias)":
-            bias_class = "signal-buy"
-            emoji = "📈"
-            bias_text = "BUY BIAS"
-        else:
-            bias_class = "signal-neutral"
-            emoji = "➡️"
-            bias_text = "NEUTRAL"
-        
-        st.markdown(f'<div class="{bias_class}">', unsafe_allow_html=True)
-        st.markdown(f"### → Market Bias: {bias_text} {emoji}")
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        # NETWORK TREND SIGNAL SECTION
-        st.markdown("---")
-        st.subheader("📈 Network Trend Signal")
-        
-        signal_data = analyzer.calculate_network_signal(current_data)
-        
-        # Display signal with color coding
-        if signal_data['suggestion'] == "BUY":
-            signal_class = "signal-buy"
-            emoji = "🟢"
-            signal_text = "STRONG BUY"
-        elif signal_data['suggestion'] == "SELL":
-            signal_class = "signal-sell"
-            emoji = "🔴"
-            signal_text = "STRONG SELL"
-        else:
-            signal_class = "signal-neutral"
-            emoji = "🟡"
-            signal_text = "NEUTRAL"
-        
-        st.markdown(f'<div class="{bias_class}">', unsafe_allow_html=True)
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.metric("Active Nodes", f"{signal_data['active_nodes']:,}")
-            st.metric("Total Nodes", f"{signal_data['total_nodes']:,}")
-            st.metric("Previous Total", f"{signal_data['previous_total']:,}")
-        
-        with col2:
-            st.metric("Active Ratio", f"{signal_data['active_ratio']:.4f}")
-            st.metric("Trend", f"{signal_data['trend']:+.4f}")
-            st.metric("Final Signal", f"{signal_data['signal']:+.4f}")
-        
-        st.markdown(f"### → {signal_text} SIGNAL {emoji}")
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        # TOR TREND CHART
-        st.markdown("---")
-        st.subheader("📊 Tor Trend Chart")
-        
-        tor_chart = analyzer.plot_tor_trend_chart()
-        if tor_chart:
-            st.plotly_chart(tor_chart, use_container_width=True)
-        else:
-            st.info("Collecting more data for chart...")
-        
-        # NETWORK HEALTH SUMMARY
-        st.markdown("---")
-        st.subheader("🌐 Network Health Summary")
+        st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+        st.markdown('<h2 class="section-header">🌐 NETWORK HEALTH SUMMARY</h2>', unsafe_allow_html=True)
         
         col1, col2, col3 = st.columns(3)
         
         with col1:
             if current_data['tor_percentage'] > 20:
-                status = "🟢 Excellent"
+                status = "🟢 EXCELLENT"
+                delta = "HIGH PRIVACY"
             elif current_data['tor_percentage'] > 10:
-                status = "🟡 Good"
+                status = "🟡 GOOD"
+                delta = "MODERATE"
             else:
-                status = "🔴 Low"
-            st.metric("Tor Privacy", status)
+                status = "🔴 LOW"
+                delta = "LOW PRIVACY"
+            st.metric("TOR PRIVACY", status, delta=delta)
         
         with col2:
             if signal_data['active_ratio'] > 0.8:
-                status = "🟢 Excellent"
+                status = "🟢 EXCELLENT"
+                delta = "HIGH ACTIVITY"
             elif signal_data['active_ratio'] > 0.6:
-                status = "🟡 Good"
+                status = "🟡 GOOD"
+                delta = "MODERATE"
             else:
-                status = "🔴 Low"
-            st.metric("Network Activity", status)
+                status = "🔴 LOW"
+                delta = "LOW ACTIVITY"
+            st.metric("NETWORK ACTIVITY", status, delta=delta)
         
         with col3:
             if signal_data['trend'] > 0.01:
-                status = "🟢 Growing"
+                status = "🟢 GROWING"
+                delta = "EXPANDING"
             elif signal_data['trend'] < -0.01:
-                status = "🔴 Shrinking"
+                status = "🔴 SHRINKING"
+                delta = "CONTRACTING"
             else:
-                status = "🟡 Stable"
-            st.metric("Network Trend", status)
+                status = "🟡 STABLE"
+                delta = "STEADY"
+            st.metric("NETWORK TREND", status, delta=delta)
         
         # Last update time
         last_time = datetime.fromisoformat(current_data['timestamp'])
-        st.caption(f"🕒 Node data updated: {last_time.strftime('%Y-%m-%d %H:%M:%S')}")
+        st.markdown(f'<p style="text-align: center; color: #8892b0; font-family: Rajdhani;">🕒 Node data updated: {last_time.strftime("%Y-%m-%d %H:%M:%S")}</p>', unsafe_allow_html=True)
         
         # Historical data info
         if len(analyzer.historical_data) > 1:
-            st.caption(f"📊 Data points: {len(analyzer.historical_data)} snapshots")
+            st.markdown(f'<p style="text-align: center; color: #8892b0; font-family: Rajdhani;">📊 Data points: {len(analyzer.historical_data)} snapshots collected</p>', unsafe_allow_html=True)
     
     else:
-        st.info("📱 Tap 'Update Node Data' above to load network analysis!")
+        st.info("📱 Tap 'UPDATE NODE DATA' above to load network analysis!")
     
-    # Explanation Section
-    with st.expander("ℹ️ Understanding Tor Trend Analysis", expanded=True):
-        st.markdown("""
-        **Tor Trend Analyzer Formula:**
-        ```
-        Tor Trend = (Current Tor % - Previous Tor %) ÷ Previous Tor %
-        ```
-        
-        **Market Bias Interpretation:**
-        - **BEARISH/SELL BIAS (📉)**: Tor Trend > 0 (More privacy = Sell signal)
-        - **BULLISH/BUY BIAS (📈)**: Tor Trend < 0 (Less privacy = Buy signal)  
-        - **NEUTRAL (➡️)**: Tor Trend ≈ 0 (Stable privacy = Neutral)
-        
-        **Why This Works:**
-        - Increasing Tor % = More privacy = Often precedes price drops
-        - Decreasing Tor % = Less privacy = Often precedes price rises
-        - Based on the observation that privacy spikes correlate with bearish sentiment
-        
-        **Network Trend Signal Formula:**
-        ```
-        Signal = (Active Nodes ÷ Total Nodes) × ((Current Total Nodes − Previous Total Nodes) ÷ Previous Total Nodes)
-        ```
-        """)
+    # PRO TIPS SECTION (Keeping this as it's useful for users)
+    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class="cyber-card">
+    <h3 style="font-family: Orbitron; color: #00ffff; text-align: center;">💡 PRO TIPS</h3>
+    <p style="text-align: center; color: #8892b0; font-family: Rajdhani;">
+    The BTC price updates automatically every time you load the page.<br>
+    Node data updates when you click the UPDATE NODE DATA button.
+    </p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    # Auto-refresh suggestion
-    st.markdown("---")
-    st.info("💡 **Pro Tip:** The BTC price updates automatically every time you load the page. Node data updates when you click the button.")
-    
-    # Zohaib's Trademark Footer
-    st.markdown("---")
-    st.markdown('<div class="trademark">© 2025 Zohaib\'s Bitcoin Tracker • Tor Node Trend Analyzer</div>', unsafe_allow_html=True)
+    # Abdullah's Futuristic Trademark Footer
+    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class="trademark">
+    <p>⚡ CYBER BITCOIN ANALYTICS PLATFORM ⚡</p>
+    <p>© 2025 ABDULLAH'S BITCOIN TRACKER • PROPRIETARY ALGORITHM</p>
+    <p style="font-size: 0.7rem; color: #556699;">BUILT WITH STREAMLIT • POWERED BY BITNODES API</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
