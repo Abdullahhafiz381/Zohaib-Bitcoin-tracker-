@@ -7,279 +7,39 @@ from datetime import datetime, timedelta
 import plotly.graph_objects as go
 import plotly.express as px
 
-# Futuristic Streamlit setup
-st.set_page_config(
-    page_title="🚀 Abdullah's Crypto Tracker",
-    page_icon="₿",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
-
-# Futuristic CSS with cyberpunk theme
-st.markdown("""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
-    
-    .main {
-        background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
-        color: #ffffff;
-        font-family: 'Rajdhani', sans-serif;
-    }
-    
-    .stApp {
-        background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
-    }
-    
-    .cyber-header {
-        background: linear-gradient(90deg, #00ffff 0%, #ff00ff 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-family: 'Orbitron', monospace;
-        font-weight: 900;
-        text-align: center;
-        font-size: 3.5rem;
-        margin-bottom: 0.5rem;
-        text-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
-    }
-    
-    .cyber-subheader {
-        color: #8892b0;
-        font-family: 'Orbitron', monospace;
-        text-align: center;
-        font-size: 1.2rem;
-        margin-bottom: 2rem;
-        letter-spacing: 2px;
-    }
-    
-    .cyber-card {
-        background: rgba(10, 15, 35, 0.8);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(0, 255, 255, 0.3);
-        border-radius: 15px;
-        padding: 1.5rem;
-        margin: 0.5rem 0;
-        box-shadow: 0 8px 32px rgba(0, 255, 255, 0.1);
-        transition: all 0.3s ease;
-    }
-    
-    .cyber-card:hover {
-        border-color: #00ffff;
-        box-shadow: 0 8px 32px rgba(0, 255, 255, 0.3);
-        transform: translateY(-2px);
-    }
-    
-    .signal-buy {
-        background: linear-gradient(135deg, rgba(0, 255, 127, 0.1) 0%, rgba(0, 100, 0, 0.3) 100%);
-        border: 1px solid #00ff7f;
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin: 0.5rem 0;
-        box-shadow: 0 0 20px rgba(0, 255, 127, 0.3);
-    }
-    
-    .signal-sell {
-        background: linear-gradient(135deg, rgba(255, 0, 127, 0.1) 0%, rgba(100, 0, 0, 0.3) 100%);
-        border: 1px solid #ff007f;
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin: 0.5rem 0;
-        box-shadow: 0 0 20px rgba(255, 0, 127, 0.3);
-    }
-    
-    .signal-neutral {
-        background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(100, 100, 0, 0.3) 100%);
-        border: 1px solid #ffd700;
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin: 0.5rem 0;
-        box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
-    }
-    
-    .price-glow {
-        background: linear-gradient(135deg, rgba(0, 255, 255, 0.1) 0%, rgba(255, 0, 255, 0.1) 100%);
-        border: 1px solid rgba(0, 255, 255, 0.5);
-        border-radius: 15px;
-        padding: 2rem;
-        margin: 1rem 0;
-        box-shadow: 0 0 40px rgba(0, 255, 255, 0.2);
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .price-glow::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: linear-gradient(45deg, transparent, rgba(0, 255, 255, 0.1), transparent);
-        animation: shine 3s infinite linear;
-    }
-    
-    @keyframes shine {
-        0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
-        100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
-    }
-    
-    .cyber-button {
-        background: linear-gradient(90deg, #00ffff 0%, #ff00ff 100%);
-        border: none;
-        border-radius: 25px;
-        color: #000000;
-        font-family: 'Orbitron', monospace;
-        font-weight: 700;
-        padding: 0.75rem 2rem;
-        transition: all 0.3s ease;
-        box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
-    }
-    
-    .cyber-button:hover {
-        transform: scale(1.05);
-        box-shadow: 0 0 30px rgba(255, 0, 255, 0.7);
-    }
-    
-    .metric-cyber {
-        background: rgba(0, 0, 0, 0.6);
-        border: 1px solid rgba(0, 255, 255, 0.2);
-        border-radius: 10px;
-        padding: 1rem;
-        margin: 0.5rem 0;
-    }
-    
-    .trademark {
-        text-align: center;
-        color: #8892b0;
-        font-family: 'Orbitron', monospace;
-        font-size: 0.9rem;
-        margin-top: 2rem;
-        letter-spacing: 1px;
-    }
-    
-    .section-header {
-        font-family: 'Orbitron', monospace;
-        font-size: 1.8rem;
-        background: linear-gradient(90deg, #00ffff 0%, #ff00ff 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin: 2rem 0 1rem 0;
-        text-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
-    }
-    
-    .divider {
-        height: 2px;
-        background: linear-gradient(90deg, transparent 0%, #00ffff 50%, transparent 100%);
-        margin: 2rem 0;
-    }
-    
-    .pulse {
-        animation: pulse 2s infinite;
-    }
-    
-    @keyframes pulse {
-        0% { opacity: 1; }
-        50% { opacity: 0.7; }
-        100% { opacity: 1; }
-    }
-    
-    .coin-card {
-        background: rgba(20, 25, 45, 0.9);
-        border: 1px solid rgba(0, 255, 255, 0.2);
-        border-radius: 12px;
-        padding: 1rem;
-        margin: 0.5rem;
-        transition: all 0.3s ease;
-    }
-    
-    .coin-card:hover {
-        border-color: #00ffff;
-        box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
-        transform: translateY(-3px);
-    }
-    
-    /* Custom metric styling */
-    [data-testid="stMetricValue"] {
-        font-family: 'Orbitron', monospace;
-        font-weight: 700;
-    }
-    
-    [data-testid="stMetricLabel"] {
-        font-family: 'Rajdhani', sans-serif;
-        font-weight: 600;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-def get_crypto_prices():
-    """Get crypto prices from multiple sources with fallback"""
-    coins = {
-        'BTCUSDT': 'bitcoin',
-        'ETHUSDT': 'ethereum', 
-        'LTCUSDT': 'litecoin',
-        'BCHUSDT': 'bitcoin-cash',
-        'SOLUSDT': 'solana',
-        'ADAUSDT': 'cardano',
-        'AVAXUSDT': 'avalanche-2',
-        'DOGEUSDT': 'dogecoin',
-        'DOTUSDT': 'polkadot',
-        'LINKUSDT': 'chainlink',
-        'BNBUSDT': 'binancecoin'
-    }
-    
-    prices = {}
-    
-    try:
-        # Try Binance first for all coins
-        for symbol in coins.keys():
-            try:
-                response = requests.get(f"https://api.binance.com/api/v3/ticker/price?symbol={symbol}", timeout=5)
-                response.raise_for_status()
-                prices[symbol] = float(response.json()['price'])
-            except:
-                prices[symbol] = None
-        
-        # Fill missing prices with CoinGecko
-        missing_coins = [coin_id for symbol, coin_id in coins.items() if prices.get(symbol) is None]
-        if missing_coins:
-            try:
-                coin_ids = ','.join(missing_coins)
-                response = requests.get(f"https://api.coingecko.com/api/v3/simple/price?ids={coin_ids}&vs_currencies=usd", timeout=5)
-                response.raise_for_status()
-                gecko_data = response.json()
-                
-                for symbol, coin_id in coins.items():
-                    if prices.get(symbol) is None and coin_id in gecko_data:
-                        prices[symbol] = float(gecko_data[coin_id]['usd'])
-            except:
-                pass
-                
-    except Exception as e:
-        st.error(f"Error fetching prices: {e}")
-    
-    return prices
+# ... (keep all your existing CSS and setup code) ...
 
 class CryptoAnalyzer:
     def __init__(self, data_file="network_data.json"):
         self.data_file = data_file
         self.bitnodes_api = "https://bitnodes.io/api/v1/snapshots/latest/"
-        self.load_historical_data()
+        self.load_node_data()
     
-    def load_historical_data(self):
-        """Load historical node data from JSON file"""
+    def load_node_data(self):
+        """Load only current and previous node data"""
         try:
             if os.path.exists(self.data_file):
                 with open(self.data_file, 'r') as f:
-                    self.historical_data = json.load(f)
+                    data = json.load(f)
+                    self.current_data = data.get('current_data')
+                    self.previous_data = data.get('previous_data')
             else:
-                self.historical_data = []
+                self.current_data = None
+                self.previous_data = None
         except:
-            self.historical_data = []
+            self.current_data = None
+            self.previous_data = None
     
-    def save_historical_data(self):
-        """Save current data to JSON file"""
+    def save_node_data(self):
+        """Save current and previous node data"""
         try:
+            data = {
+                'current_data': self.current_data,
+                'previous_data': self.previous_data,
+                'last_updated': datetime.now().isoformat()
+            }
             with open(self.data_file, 'w') as f:
-                json.dump(self.historical_data, f, indent=2)
+                json.dump(data, f, indent=2)
         except Exception as e:
             st.error(f"Error saving data: {e}")
     
@@ -320,228 +80,91 @@ class CryptoAnalyzer:
             st.error(f"Error fetching node data: {e}")
             return None
     
-    def get_previous_total_nodes(self):
-        """Get previous day's total nodes"""
-        if len(self.historical_data) < 2:
-            return None
+    def update_node_data(self):
+        """Fetch new data and shift current to previous"""
+        new_data = self.fetch_node_data()
+        if not new_data:
+            return False
         
-        current_time = datetime.now()
-        target_time = current_time - timedelta(hours=24)
+        # Shift current to previous, set new data as current
+        self.previous_data = self.current_data
+        self.current_data = new_data
         
-        closest_snapshot = None
-        min_time_diff = float('inf')
-        
-        for snapshot in self.historical_data[:-1]:
-            try:
-                snapshot_time = datetime.fromisoformat(snapshot['timestamp'])
-                time_diff = abs((snapshot_time - target_time).total_seconds())
-                
-                if time_diff < min_time_diff:
-                    min_time_diff = time_diff
-                    closest_snapshot = snapshot
-            except:
-                continue
-        
-        return closest_snapshot['total_nodes'] if closest_snapshot else None
+        self.save_node_data()
+        return True
     
-    def get_previous_tor_percentage(self):
-        """Get previous day's Tor percentage for trend analysis"""
-        if len(self.historical_data) < 2:
-            return None
-        
-        current_time = datetime.now()
-        target_time = current_time - timedelta(hours=24)
-        
-        closest_snapshot = None
-        min_time_diff = float('inf')
-        
-        for snapshot in self.historical_data[:-1]:
-            try:
-                snapshot_time = datetime.fromisoformat(snapshot['timestamp'])
-                time_diff = abs((snapshot_time - target_time).total_seconds())
-                
-                if time_diff < min_time_diff:
-                    min_time_diff = time_diff
-                    closest_snapshot = snapshot
-            except:
-                continue
-        
-        return closest_snapshot['tor_percentage'] if closest_snapshot else None
-    
-    def calculate_network_signal(self, current_data):
-        """Calculate trading signal based on network trends"""
-        previous_total = self.get_previous_total_nodes()
-        
-        if previous_total is None or previous_total == 0:
+    def calculate_tor_signal(self):
+        """Calculate signal based on difference between current and previous Tor nodes"""
+        if not self.current_data or not self.previous_data:
             return {
-                'active_nodes': current_data['active_nodes'],
-                'total_nodes': current_data['total_nodes'],
-                'previous_total': "No previous data",
-                'active_ratio': current_data['active_ratio'],
-                'trend': 0,
-                'signal': 0,
-                'suggestion': "INSUFFICIENT_DATA"
+                'current_tor': self.current_data['tor_nodes'] if self.current_data else 0,
+                'previous_tor': self.previous_data['tor_nodes'] if self.previous_data else 0,
+                'tor_change': 0,
+                'signal': "INSUFFICIENT_DATA",
+                'bias': "NEED MORE DATA"
             }
         
-        active_ratio = current_data['active_ratio']
-        trend = (current_data['total_nodes'] - previous_total) / previous_total
-        signal = active_ratio * trend
+        current_tor = self.current_data['tor_nodes']
+        previous_tor = self.previous_data['tor_nodes']
         
-        # Determine suggestion
-        if signal > 0.01:
-            suggestion = "BUY"
-        elif signal < -0.01:
-            suggestion = "SELL"
-        else:
-            suggestion = "SIDEWAYS"
+        # Calculate absolute change in Tor nodes
+        tor_change = current_tor - previous_tor
         
-        return {
-            'active_nodes': current_data['active_nodes'],
-            'total_nodes': current_data['total_nodes'],
-            'previous_total': previous_total,
-            'active_ratio': round(active_ratio, 4),
-            'trend': round(trend, 4),
-            'signal': round(signal, 4),
-            'suggestion': suggestion
-        }
-    
-    def calculate_tor_trend(self, current_tor_percentage):
-        """Calculate Tor trend and market bias"""
-        previous_tor_percentage = self.get_previous_tor_percentage()
-        
-        if previous_tor_percentage is None or previous_tor_percentage == 0:
-            return {
-                'previous_tor': "No data",
-                'current_tor': current_tor_percentage,
-                'tor_trend': 0,
-                'bias': "INSUFFICIENT_DATA"
-            }
-        
-        # Calculate Tor Trend
-        tor_trend = (current_tor_percentage - previous_tor_percentage) / previous_tor_percentage
-        
-        # Determine market bias
-        if tor_trend > 0.001:
-            bias = "BEARISH (Sell Bias)"
-        elif tor_trend < -0.001:
-            bias = "BULLISH (Buy Bias)"
-        else:
+        # Simple signal logic based on Tor node change
+        if tor_change > 10:  # Tor nodes increased by more than 10
+            signal = "STRONG SELL"
+            bias = "BEARISH"
+        elif tor_change > 5:  # Tor nodes increased by 6-10
+            signal = "SELL" 
+            bias = "SLIGHTLY BEARISH"
+        elif tor_change < -10:  # Tor nodes decreased by more than 10
+            signal = "STRONG BUY"
+            bias = "BULLISH"
+        elif tor_change < -5:  # Tor nodes decreased by 6-10
+            signal = "BUY"
+            bias = "SLIGHTLY BULLISH"
+        else:  # Small change (-5 to +5)
+            signal = "HOLD"
             bias = "NEUTRAL"
         
         return {
-            'previous_tor': round(previous_tor_percentage, 2),
-            'current_tor': round(current_tor_percentage, 2),
-            'tor_trend': round(tor_trend * 100, 2),
+            'current_tor': current_tor,
+            'previous_tor': previous_tor,
+            'tor_change': tor_change,
+            'signal': signal,
             'bias': bias
         }
     
-    def update_network_data(self):
-        """Fetch new data and update historical records"""
-        current_data = self.fetch_node_data()
-        if not current_data:
-            return False
+    def calculate_network_signal(self):
+        """Calculate signal based on total node changes"""
+        if not self.current_data or not self.previous_data:
+            return {
+                'current_total': self.current_data['total_nodes'] if self.current_data else 0,
+                'previous_total': self.previous_data['total_nodes'] if self.previous_data else 0,
+                'total_change': 0,
+                'network_signal': "INSUFFICIENT_DATA"
+            }
         
-        # Add to historical data
-        self.historical_data.append(current_data)
+        current_total = self.current_data['total_nodes']
+        previous_total = self.previous_data['total_nodes']
+        total_change = current_total - previous_total
         
-        # Keep only last 7 days of data
-        if len(self.historical_data) > 1008:
-            self.historical_data = self.historical_data[-1008:]
+        # Network health signal
+        if total_change > 50:
+            network_signal = "NETWORK GROWING"
+        elif total_change > 0:
+            network_signal = "NETWORK STABLE" 
+        else:
+            network_signal = "NETWORK SHRINKING"
         
-        self.save_historical_data()
-        return True
-    
-    def plot_tor_trend_chart(self):
-        """Plot Tor percentage trend over time"""
-        if len(self.historical_data) < 2:
-            return None
-        
-        # Prepare data for plotting
-        dates = []
-        tor_percentages = []
-        
-        for entry in self.historical_data[-24:]:
-            try:
-                date = datetime.fromisoformat(entry['timestamp']).strftime('%H:%M')
-                dates.append(date)
-                tor_percentages.append(entry['tor_percentage'])
-            except:
-                continue
-        
-        if len(dates) < 2:
-            return None
-        
-        # Create futuristic plot
-        fig = go.Figure()
-        
-        fig.add_trace(go.Scatter(
-            x=dates,
-            y=tor_percentages,
-            mode='lines+markers',
-            name='Tor %',
-            line=dict(color='#00ffff', width=4, shape='spline'),
-            marker=dict(size=8, color='#ff00ff', line=dict(width=2, color='#ffffff')),
-            fill='tozeroy',
-            fillcolor='rgba(0, 255, 255, 0.1)'
-        ))
-        
-        fig.update_layout(
-            title=dict(
-                text="🕵️ Tor Percentage Trend (Last 24 Hours)",
-                font=dict(family='Orbitron', size=20, color='#ffffff')
-            ),
-            xaxis=dict(
-                title="Time",
-                gridcolor='rgba(0, 255, 255, 0.1)',
-                tickfont=dict(family='Rajdhani', color='#8892b0')
-            ),
-            yaxis=dict(
-                title="Tor Percentage (%)",
-                gridcolor='rgba(0, 255, 255, 0.1)',
-                tickfont=dict(family='Rajdhani', color='#8892b0')
-            ),
-            plot_bgcolor='rgba(10, 15, 35, 0.5)',
-            paper_bgcolor='rgba(0, 0, 0, 0)',
-            font=dict(color='#ffffff'),
-            height=400,
-            showlegend=True
-        )
-        
-        return fig
+        return {
+            'current_total': current_total,
+            'previous_total': previous_total,
+            'total_change': total_change,
+            'network_signal': network_signal
+        }
 
-def get_coin_display_name(symbol):
-    """Get display name for crypto symbols"""
-    names = {
-        'BTCUSDT': 'Bitcoin',
-        'ETHUSDT': 'Ethereum',
-        'LTCUSDT': 'Litecoin',
-        'BCHUSDT': 'Bitcoin Cash',
-        'SOLUSDT': 'Solana',
-        'ADAUSDT': 'Cardano',
-        'AVAXUSDT': 'Avalanche',
-        'DOGEUSDT': 'Dogecoin',
-        'DOTUSDT': 'Polkadot',
-        'LINKUSDT': 'Chainlink',
-        'BNBUSDT': 'Binance Coin'
-    }
-    return names.get(symbol, symbol)
-
-def get_coin_emoji(symbol):
-    """Get emoji for crypto symbols"""
-    emojis = {
-        'BTCUSDT': '₿',
-        'ETHUSDT': '🔷',
-        'LTCUSDT': '🔶',
-        'BCHUSDT': '💰',
-        'SOLUSDT': '🔥',
-        'ADAUSDT': '🔰',
-        'AVAXUSDT': '❄️',
-        'DOGEUSDT': '🐕',
-        'DOTUSDT': '🔴',
-        'LINKUSDT': '🔗',
-        'BNBUSDT': '💎'
-    }
-    return emojis.get(symbol, '⚡')
+# ... (keep get_crypto_prices, get_coin_display_name, get_coin_emoji functions) ...
 
 def main():
     # Initialize analyzer
@@ -549,7 +172,7 @@ def main():
     
     # Futuristic Header
     st.markdown('<h1 class="cyber-header">🚀 ABDULLAH\'S CRYPTO TRACKER</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="cyber-subheader">TOR NODE TREND ANALYZER • MULTI-COIN SIGNALS • LIVE PRICES</p>', unsafe_allow_html=True)
+    st.markdown('<p class="cyber-subheader">REAL-TIME TOR NODE SIGNALS • LIVE PRICES • AUTO-REFRESH</p>', unsafe_allow_html=True)
     
     # LIVE CRYPTO PRICES SECTION
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
@@ -596,8 +219,7 @@ def main():
             if price:
                 with cols[idx % 4]:
                     emoji = get_coin_emoji(symbol)
-                    name = get_coin_display_name(symbol)
-                    
+                    name = get_coin_display_name(symbol)            
                     st.markdown(f'''
                     <div class="coin-card">
                         <div style="text-align: center;">
@@ -612,116 +234,127 @@ def main():
     else:
         st.error("❌ Could not fetch crypto prices")
     
-    # Refresh button for node data
+    # AUTO-REFRESH NODE DATA SECTION
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
     col1, col2 = st.columns([3, 1])
     with col1:
-        st.markdown('<h2 class="section-header">📊 NETWORK ANALYSIS</h2>', unsafe_allow_html=True)
+        st.markdown('<h2 class="section-header">🔄 REAL-TIME NODE ANALYSIS</h2>', unsafe_allow_html=True)
     with col2:
         if st.button("🔄 UPDATE NODE DATA", key="refresh_main", use_container_width=True):
-            with st.spinner("🔍 Analyzing network data..."):
-                if analyzer.update_network_data():
+            with st.spinner("🔄 Updating node data..."):
+                if analyzer.update_node_data():
                     st.success("✅ Node data updated successfully!")
                     st.rerun()
                 else:
-                    st.error("❌ Node data update failed")
+                    st.error("❌ Failed to update node data")
     
-    # Main content in two columns for better mobile layout
+    # Display current node data status
+    if analyzer.current_data:
+        current_time = datetime.fromisoformat(analyzer.current_data['timestamp'])
+        st.markdown(f'<p style="text-align: center; color: #00ffff; font-family: Rajdhani;">📊 Current data from: {current_time.strftime("%Y-%m-%d %H:%M:%S")}</p>', unsafe_allow_html=True)
+    
+    # TOR NODE SIGNAL ANALYSIS
+    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-header">🎯 TOR NODE SIGNAL ANALYSIS</h2>', unsafe_allow_html=True)
+    
+    # Main content in two columns
     col1, col2 = st.columns([1, 1])
     
     with col1:
-        # Get current node data
-        if len(analyzer.historical_data) > 0:
-            current_data = analyzer.historical_data[-1]
-            
-            # TOR TREND ANALYZER SECTION
-            st.markdown('<div class="cyber-card">', unsafe_allow_html=True)
-            st.markdown('<h3 style="font-family: Orbitron; color: #00ffff; text-align: center;">🕵️ TOR TREND ANALYZER</h3>', unsafe_allow_html=True)
-            
-            # Calculate Tor trend
-            tor_trend_data = analyzer.calculate_tor_trend(current_data['tor_percentage'])
-            
-            # Display Tor trend results in a grid
-            col1a, col2a, col3a = st.columns(3)
+        # TOR NODE COMPARISON
+        st.markdown('<div class="cyber-card">', unsafe_allow_html=True)
+        st.markdown('<h3 style="font-family: Orbitron; color: #00ffff; text-align: center;">🔄 NODE COMPARISON</h3>', unsafe_allow_html=True)
+        
+        tor_signal = analyzer.calculate_tor_signal()
+        network_signal = analyzer.calculate_network_signal()
+        
+        # Display node comparison
+        if analyzer.previous_data:
+            col1a, col2a = st.columns(2)
             
             with col1a:
-                st.metric("📊 PREVIOUS TOR %", f"{tor_trend_data['previous_tor']}%")
+                st.metric("🕒 PREVIOUS TOR NODES", f"{tor_signal['previous_tor']:,}")
+                st.metric("🕒 PREVIOUS TOTAL NODES", f"{network_signal['previous_total']:,}")
             
             with col2a:
-                st.metric("🎯 CURRENT TOR %", f"{tor_trend_data['current_tor']}%")
+                st.metric("🟢 CURRENT TOR NODES", f"{tor_signal['current_tor']:,}")
+                st.metric("🟢 CURRENT TOTAL NODES", f"{network_signal['current_total']:,}")
             
-            with col3a:
-                trend_value = tor_trend_data['tor_trend']
-                st.metric("📈 TOR TREND", f"{trend_value:+.2f}%")
-            
+            # Display changes
+            st.markdown('<div style="text-align: center; margin: 1rem 0;">', unsafe_allow_html=True)
+            st.metric("📈 TOR NODE CHANGE", f"{tor_signal['tor_change']:+,}", delta="nodes")
+            st.metric("📈 TOTAL NODE CHANGE", f"{network_signal['total_change']:+,}", delta="nodes")
             st.markdown('</div>', unsafe_allow_html=True)
-            
-            # Display market bias with cyber styling
-            if tor_trend_data['bias'] == "BEARISH (Sell Bias)":
-                bias_class = "signal-sell"
-                emoji = "📉"
-                bias_text = "SELL BIAS"
-            elif tor_trend_data['bias'] == "BULLISH (Buy Bias)":
-                bias_class = "signal-buy"
-                emoji = "📈"
-                bias_text = "BUY BIAS"
-            else:
-                bias_class = "signal-neutral"
-                emoji = "➡️"
-                bias_text = "NEUTRAL"
-            
-            st.markdown(f'<div class="{bias_class}">', unsafe_allow_html=True)
-            st.markdown(f'<h3 style="font-family: Orbitron; text-align: center; margin: 0;">🚀 MARKET BIAS: {bias_text} {emoji}</h3>', unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+        else:
+            st.info("🔄 Update node data to see comparison (current → previous)")
+        
+        st.markdown('</div>', unsafe_allow_html=True)
     
     with col2:
-        if len(analyzer.historical_data) > 0:
-            # NETWORK TREND SIGNAL SECTION
-            st.markdown('<div class="cyber-card">', unsafe_allow_html=True)
-            st.markdown('<h3 style="font-family: Orbitron; color: #00ffff; text-align: center;">📈 NETWORK TREND SIGNAL</h3>', unsafe_allow_html=True)
-            
-            signal_data = analyzer.calculate_network_signal(current_data)
-            
-            # Display network metrics
+        # SIGNAL RESULTS
+        st.markdown('<div class="cyber-card">', unsafe_allow_html=True)
+        st.markdown('<h3 style="font-family: Orbitron; color: #00ffff; text-align: center;">📊 SIGNAL RESULTS</h3>', unsafe_allow_html=True)
+        
+        if analyzer.current_data:
+            # Current network stats
             col1b, col2b = st.columns(2)
             
             with col1b:
-                st.metric("🟢 ACTIVE NODES", f"{signal_data['active_nodes']:,}")
-                st.metric("📊 TOTAL NODES", f"{signal_data['total_nodes']:,}")
-                st.metric("🕒 PREVIOUS TOTAL", f"{signal_data['previous_total']:,}")
+                st.metric("🔒 TOR NODES", f"{analyzer.current_data['tor_nodes']:,}")
+                st.metric("🌐 TOTAL NODES", f"{analyzer.current_data['total_nodes']:,}")
             
             with col2b:
-                st.metric("⚡ ACTIVE RATIO", f"{signal_data['active_ratio']:.4f}")
-                st.metric("📈 TREND", f"{signal_data['trend']:+.4f}")
-                st.metric("🎯 FINAL SIGNAL", f"{signal_data['signal']:+.4f}")
+                st.metric("⚡ ACTIVE NODES", f"{analyzer.current_data['active_nodes']:,}")
+                st.metric("📊 ACTIVE RATIO", f"{analyzer.current_data['active_ratio']:.3f}")
             
+            # Display signals
+            st.markdown('<div style="text-align: center; margin: 1rem 0;">', unsafe_allow_html=True)
+            st.metric("🎯 TOR SIGNAL", tor_signal['signal'])
+            st.metric("📡 MARKET BIAS", tor_signal['bias'])
             st.markdown('</div>', unsafe_allow_html=True)
-            
-            # Display signal with cyber styling
-            if signal_data['suggestion'] == "BUY":
-                signal_class = "signal-buy"
-                emoji = "🟢"
-                signal_text = "STRONG BUY"
-            elif signal_data['suggestion'] == "SELL":
-                signal_class = "signal-sell"
-                emoji = "🔴"
-                signal_text = "STRONG SELL"
-            else:
-                signal_class = "signal-neutral"
-                emoji = "🟡"
-                signal_text = "NEUTRAL"
-            
-            st.markdown(f'<div class="{signal_class}">', unsafe_allow_html=True)
-            st.markdown(f'<h3 style="font-family: Orbitron; text-align: center; margin: 0;">🎯 {signal_text} SIGNAL {emoji}</h3>', unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+        else:
+            st.info("🔄 Update node data to see signals")
+        
+        st.markdown('</div>', unsafe_allow_html=True)
     
-    # MULTI-COIN SIGNALS BASED ON TOR TREND
+    # SIGNAL DISPLAY BASED ON TOR CHANGE
+    if analyzer.current_data and analyzer.previous_data:
+        tor_signal_data = analyzer.calculate_tor_signal()
+        
+        # Display main signal with cyber styling
+        if "STRONG SELL" in tor_signal_data['signal']:
+            signal_class = "signal-sell"
+            emoji = "🔴"
+            explanation = "Tor nodes increased significantly - Privacy demand rising (Bearish)"
+        elif "SELL" in tor_signal_data['signal']:
+            signal_class = "signal-sell"
+            emoji = "🔴"
+            explanation = "Tor nodes increased - Potential selling pressure"
+        elif "STRONG BUY" in tor_signal_data['signal']:
+            signal_class = "signal-buy"
+            emoji = "🟢"
+            explanation = "Tor nodes decreased significantly - Privacy demand dropping (Bullish)"
+        elif "BUY" in tor_signal_data['signal']:
+            signal_class = "signal-buy"
+            emoji = "🟢" 
+            explanation = "Tor nodes decreased - Potential buying opportunity"
+        else:
+            signal_class = "signal-neutral"
+            emoji = "🟡"
+            explanation = "Minimal change in Tor nodes - Market neutral"
+        
+        st.markdown(f'<div class="{signal_class}">', unsafe_allow_html=True)
+        st.markdown(f'<h2 style="font-family: Orbitron; text-align: center; margin: 0.5rem 0;">🚀 {tor_signal_data["signal"]} SIGNAL {emoji}</h2>', unsafe_allow_html=True)
+        st.markdown(f'<p style="text-align: center; color: #8892b0; font-family: Rajdhani; margin: 0.5rem 0;">{explanation}</p>', unsafe_allow_html=True)
+        st.markdown(f'<p style="text-align: center; font-family: Orbitron; color: #ffffff; margin: 0.5rem 0;">Tor Node Change: {tor_signal_data["tor_change"]:+,} nodes</p>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True')
+    
+    # MULTI-COIN SIGNALS
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
     st.markdown('<h2 class="section-header">🎯 MULTI-COIN TOR SIGNALS</h2>', unsafe_allow_html=True)
     
-    if len(analyzer.historical_data) > 0:
-        current_data = analyzer.historical_data[-1]
-        tor_trend_data = analyzer.calculate_tor_trend(current_data['tor_percentage'])
+    if analyzer.current_data and analyzer.previous_data:
+        tor_signal_data = analyzer.calculate_tor_signal()
         
         # Apply Tor trend analysis to all coins
         coins_list = [
@@ -739,18 +372,18 @@ def main():
                     name = get_coin_display_name(symbol)
                     price = prices[symbol]
                     
-                    # Apply the same Tor trend signal to all coins
-                    if tor_trend_data['bias'] == "BEARISH (Sell Bias)":
+                    # Apply the same Tor signal to all coins
+                    if "SELL" in tor_signal_data['signal']:
                         signal_class = "signal-sell"
-                        signal_text = "SELL"
+                        signal_text = tor_signal_data['signal']
                         signal_emoji = "🔴"
-                    elif tor_trend_data['bias'] == "BULLISH (Buy Bias)":
+                    elif "BUY" in tor_signal_data['signal']:
                         signal_class = "signal-buy"
-                        signal_text = "BUY"
+                        signal_text = tor_signal_data['signal']
                         signal_emoji = "🟢"
                     else:
                         signal_class = "signal-neutral"
-                        signal_text = "HOLD"
+                        signal_text = tor_signal_data['signal']
                         signal_emoji = "🟡"
                     
                     st.markdown(f'''
@@ -759,98 +392,22 @@ def main():
                             <h4 style="font-family: Orbitron; margin: 0.5rem 0; font-size: 1.1rem;">{emoji} {name}</h4>
                             <p style="font-family: Orbitron; font-size: 1.2rem; font-weight: 700; margin: 0.5rem 0;">${price:,.2f}</p>
                             <p style="font-family: Orbitron; font-size: 1rem; margin: 0.5rem 0;">{signal_emoji} {signal_text}</p>
-                            <p style="color: #8892b0; font-family: Rajdhani; font-size: 0.8rem; margin: 0;">Tor Trend: {tor_trend_data['tor_trend']:+.2f}%</p>
+                            <p style="color: #8892b0; font-family: Rajdhani; font-size: 0.8rem; margin: 0;">Δ Tor: {tor_signal_data['tor_change']:+,}</p>
                         </div>
                     </div>
                     ''', unsafe_allow_html=True)
-    
-    # TOR TREND CHART
-    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-    st.markdown('<h2 class="section-header">📊 TOR TREND CHART</h2>', unsafe_allow_html=True)
-    
-    tor_chart = analyzer.plot_tor_trend_chart()
-    if tor_chart:
-        st.plotly_chart(tor_chart, use_container_width=True, config={'displayModeBar': False})
     else:
-        st.info("🔄 Collecting more data for chart...")
-    
-    # NETWORK HEALTH SUMMARY
-    if len(analyzer.historical_data) > 0:
-        st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-        st.markdown('<h2 class="section-header">🌐 NETWORK HEALTH SUMMARY</h2>', unsafe_allow_html=True)
-        
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            if current_data['tor_percentage'] > 20:
-                status = "🟢 EXCELLENT"
-                delta = "HIGH PRIVACY"
-            elif current_data['tor_percentage'] > 10:
-                status = "🟡 GOOD"
-                delta = "MODERATE"
-            else:
-                status = "🔴 LOW"
-                delta = "LOW PRIVACY"
-            st.metric("TOR PRIVACY", status, delta=delta)
-        
-        with col2:
-            if signal_data['active_ratio'] > 0.8:
-                status = "🟢 EXCELLENT"
-                delta = "HIGH ACTIVITY"
-            elif signal_data['active_ratio'] > 0.6:
-                status = "🟡 GOOD"
-                delta = "MODERATE"
-            else:
-                status = "🔴 LOW"
-                delta = "LOW ACTIVITY"
-            st.metric("NETWORK ACTIVITY", status, delta=delta)
-        
-        with col3:
-            if signal_data['trend'] > 0.01:
-                status = "🟢 GROWING"
-                delta = "EXPANDING"
-            elif signal_data['trend'] < -0.01:
-                status = "🔴 SHRINKING"
-                delta = "CONTRACTING"
-            else:
-                status = "🟡 STABLE"
-                delta = "STEADY"
-            st.metric("NETWORK TREND", status, delta=delta)
-        
-        # Last update time
-        last_time = datetime.fromisoformat(current_data['timestamp'])
-        st.markdown(f'<p style="text-align: center; color: #8892b0; font-family: Rajdhani;">🕒 Node data updated: {last_time.strftime("%Y-%m-%d %H:%M:%S")}</p>', unsafe_allow_html=True)
-        
-        # Historical data info
-        if len(analyzer.historical_data) > 1:
-            st.markdown(f'<p style="text-align: center; color: #8892b0; font-family: Rajdhani;">📊 Data points: {len(analyzer.historical_data)} snapshots collected</p>', unsafe_allow_html=True)
-    
-    else:
-        st.info("📱 Tap 'UPDATE NODE DATA' above to load network analysis!")
-    
-     # Auto-refresh suggestion
-    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-    st.markdown("""
-    <div class="cyber-card">
-    <h3 style="font-family: Orbitron; color: #00ffff; text-align: center;">💡 PRO TIPS</h3>
-    <p style="text-align: center; color: #8892b0; font-family: Rajdhani;">
-    Crypto prices update automatically every time you load the page.<br>
-    Node data updates when you click the UPDATE NODE DATA button.<br>
-    All coin signals are based on Bitcoin Tor trend analysis.
-    </p>
-    </div>
-    """, unsafe_allow_html=True)
+        st.info("🔄 Update node data to see multi-coin signals")
     
     # Abdullah's Futuristic Trademark Footer
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
     st.markdown("""
     <div class="trademark">
-    <p>⚡ CYBER CRYPTO ANALYTICS PLATFORM ⚡</p>
-    <p>© 2025 ABDULLAH'S CRYPTO TRACKER • MULTI-COIN TOR TREND ANALYZER</p>
-    <p style="font-size: 0.7rem; color: #556699;">BUILT WITH STREAMLIT • POWERED BY BINANCE & BITNODES API</p>
+    <p>⚡ REAL-TIME TOR NODE SIGNAL ANALYZER ⚡</p>
+    <p>© 2025 ABDULLAH'S CRYPTO TRACKER • CURRENT→PREVIOUS SHIFT SYSTEM</p>
+    <p style="font-size: 0.7rem; color: #556699;">CLICK UPDATE TO SHIFT DATA AND GENERATE NEW SIGNALS</p>
     </div>
     """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
-               
