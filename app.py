@@ -164,7 +164,87 @@ class CryptoAnalyzer:
             'network_signal': network_signal
         }
 
-# ... (keep get_crypto_prices, get_coin_display_name, get_coin_emoji functions) ...
+def get_crypto_prices():
+    """Get crypto prices from multiple sources with fallback"""
+    coins = {
+        'BTCUSDT': 'bitcoin',
+        'ETHUSDT': 'ethereum', 
+        'LTCUSDT': 'litecoin',
+        'BCHUSDT': 'bitcoin-cash',
+        'SOLUSDT': 'solana',
+        'ADAUSDT': 'cardano',
+        'AVAXUSDT': 'avalanche-2',
+        'DOGEUSDT': 'dogecoin',
+        'DOTUSDT': 'polkadot',
+        'LINKUSDT': 'chainlink',
+        'BNBUSDT': 'binancecoin'
+    }
+    
+    prices = {}
+    
+    try:
+        # Try Binance first for all coins
+        for symbol in coins.keys():
+            try:
+                response = requests.get(f"https://api.binance.com/api/v3/ticker/price?symbol={symbol}", timeout=5)
+                response.raise_for_status()
+                prices[symbol] = float(response.json()['price'])
+            except:
+                prices[symbol] = None
+        
+        # Fill missing prices with CoinGecko
+        missing_coins = [coin_id for symbol, coin_id in coins.items() if prices.get(symbol) is None]
+        if missing_coins:
+            try:
+                coin_ids = ','.join(missing_coins)
+                response = requests.get(f"https://api.coingecko.com/api/v3/simple/price?ids={coin_ids}&vs_currencies=usd", timeout=5)
+                response.raise_for_status()
+                gecko_data = response.json()
+                
+                for symbol, coin_id in coins.items():
+                    if prices.get(symbol) is None and coin_id in gecko_data:
+                        prices[symbol] = float(gecko_data[coin_id]['usd'])
+            except:
+                pass
+                
+    except Exception as e:
+        st.error(f"Error fetching prices: {e}")
+    
+    return prices
+
+def get_coin_display_name(symbol):
+    """Get display name for crypto symbols"""
+    names = {
+        'BTCUSDT': 'Bitcoin',
+        'ETHUSDT': 'Ethereum',
+        'LTCUSDT': 'Litecoin',
+        'BCHUSDT': 'Bitcoin Cash',
+        'SOLUSDT': 'Solana',
+        'ADAUSDT': 'Cardano',
+        'AVAXUSDT': 'Avalanche',
+        'DOGEUSDT': 'Dogecoin',
+        'DOTUSDT': 'Polkadot',
+        'LINKUSDT': 'Chainlink',
+        'BNBUSDT': 'Binance Coin'
+    }
+    return names.get(symbol, symbol)
+
+def get_coin_emoji(symbol):
+    """Get emoji for crypto symbols"""
+    emojis = {
+        'BTCUSDT': '₿',
+        'ETHUSDT': '🔷',
+        'LTCUSDT': '🔶',
+        'BCHUSDT': '💰',
+        'SOLUSDT': '🔥',
+        'ADAUSDT': '🔰',
+        'AVAXUSDT': '❄️',
+        'DOGEUSDT': '🐕',
+        'DOTUSDT': '🔴',
+        'LINKUSDT': '🔗',
+        'BNBUSDT': '💎'
+    }
+    return emojis.get(symbol, '⚡')
 
 def main():
     # Initialize analyzer
@@ -347,7 +427,7 @@ def main():
         st.markdown(f'<h2 style="font-family: Orbitron; text-align: center; margin: 0.5rem 0;">🚀 {tor_signal_data["signal"]} SIGNAL {emoji}</h2>', unsafe_allow_html=True)
         st.markdown(f'<p style="text-align: center; color: #8892b0; font-family: Rajdhani; margin: 0.5rem 0;">{explanation}</p>', unsafe_allow_html=True)
         st.markdown(f'<p style="text-align: center; font-family: Orbitron; color: #ffffff; margin: 0.5rem 0;">Tor Node Change: {tor_signal_data["tor_change"]:+,} nodes</p>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True')
+        st.markdown('</div>', unsafe_allow_html=True)
     
     # MULTI-COIN SIGNALS
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
@@ -390,7 +470,7 @@ def main():
                     <div class="{signal_class}" style="padding: 1rem; margin: 0.5rem 0;">
                         <div style="text-align: center;">
                             <h4 style="font-family: Orbitron; margin: 0.5rem 0; font-size: 1.1rem;">{emoji} {name}</h4>
-                            <p style="font-family: Orbitron; font-size: 1.2rem; font-weight: 700; margin: 0.5rem 0;">${price:,.2f}</p>
+<p style="font-family: Orbitron; font-size: 1.2rem; font-weight: 700; margin: 0.5rem 0;">${price:,.2f}</p>
                             <p style="font-family: Orbitron; font-size: 1rem; margin: 0.5rem 0;">{signal_emoji} {signal_text}</p>
                             <p style="color: #8892b0; font-family: Rajdhani; font-size: 0.8rem; margin: 0;">Δ Tor: {tor_signal_data['tor_change']:+,}</p>
                         </div>
@@ -398,6 +478,23 @@ def main():
                     ''', unsafe_allow_html=True)
     else:
         st.info("🔄 Update node data to see multi-coin signals")
+    
+    # HOW IT WORKS SECTION
+    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class="cyber-card">
+    <h3 style="font-family: Orbitron; color: #00ffff; text-align: center;">⚡ HOW IT WORKS</h3>
+    <div style="text-align: center;">
+        <p style="color: #8892b0; font-family: Rajdhani; margin: 0.5rem 0;">
+        <strong>Current → Previous Shift:</strong> Every time you click UPDATE, current data becomes previous data<br>
+        <strong>Signal Logic:</strong> Compare new current Tor nodes with previous Tor nodes<br>
+        <strong>Bullish:</strong> Tor nodes decreasing (less privacy demand)<br>
+        <strong>Bearish:</strong> Tor nodes increasing (more privacy demand)<br>
+        <strong>Refresh:</strong> Current → Previous → New Current → New Signal
+        </p>
+    </div>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Abdullah's Futuristic Trademark Footer
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
@@ -411,3 +508,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+                       
