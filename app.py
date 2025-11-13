@@ -1017,10 +1017,24 @@ def main_app():
     st.markdown("""
     <div class="trademark">
     <p>🔥 GODZILLERS CRYPTO WARFARE SYSTEM 🔥</p>
-    <p>© 2025 GODZILLERS CRYPTO TRACKER • DRAGON FIRE SIGNAL TECHNOLOGY</p>
+    <p>© 2025 GODZILLERS CRYPTO TRACKER • TOR PERCENTAGE SIGNAL TECHNOLOGY</p>
     <p style="font-size: 0.7rem; color: #ff6666;">FORGE YOUR FORTUNE WITH DRAGON FIRE PRECISION</p>
     </div>
     """, unsafe_allow_html=True)
+
+def main():
+    """Main function with login check"""
+    # Initialize session state
+    if 'logged_in' not in st.session_state:
+        st.session_state.logged_in = False
+    if 'username' not in st.session_state:
+        st.session_state.username = None
+    
+    # Check if user is logged in
+    if not st.session_state.logged_in:
+        login_page()
+    else:
+        main_app()
 
 if __name__ == "__main__":
     main()
