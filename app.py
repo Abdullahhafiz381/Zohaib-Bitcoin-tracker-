@@ -482,7 +482,8 @@ else:  # Change between -0.1% and +0.1%
     signal = "HOLD"
     bias = "NEUTRAL" 
                           
-             'current_tor_pct': current_tor_pct,
+             
+              'current_tor_pct': current_tor_pct,
             'previous_tor_pct': previous_tor_pct,
             'tor_pct_change': tor_pct_change,
             'signal': signal,
