@@ -480,10 +480,9 @@ elif tor_pct_change <= -0.1:  # Tor percentage decreased by 0.1-0.49%
     bias = "BULLISH"
 else:  # Change between -0.1% and +0.1%
     signal = "HOLD"
-    bias = "NEUTRAL"
-        
-        return {
-            'current_tor_pct': current_tor_pct,
+    bias = "NEUTRAL" 
+                          
+             'current_tor_pct': current_tor_pct,
             'previous_tor_pct': previous_tor_pct,
             'tor_pct_change': tor_pct_change,
             'signal': signal,
