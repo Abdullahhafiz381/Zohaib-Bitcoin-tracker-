@@ -6,6 +6,8 @@ import os
 from datetime import datetime, timedelta
 import plotly.graph_objects as go
 import plotly.express as px
+import hashlib
+import hmac
 
 # GODZILLERS Streamlit setup
 st.set_page_config(
@@ -228,6 +230,107 @@ st.markdown("""
         animation: pulse 2s infinite;
     }
     
+    /* Login Page Styles */
+    .login-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #000000 0%, #1a0000 50%, #330000 100%);
+    }
+    
+    .login-card {
+        background: rgba(20, 0, 0, 0.95);
+        backdrop-filter: blur(10px);
+        border: 2px solid rgba(255, 0, 0, 0.6);
+        border-radius: 20px;
+        padding: 3rem;
+        width: 100%;
+        max-width: 450px;
+        box-shadow: 0 0 50px rgba(255, 0, 0, 0.5);
+        text-align: center;
+    }
+    
+    .login-header {
+        background: linear-gradient(90deg, #ff0000 0%, #ff4444 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-family: 'Orbitron', monospace;
+        font-weight: 900;
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        text-shadow: 0 0 20px rgba(255, 0, 0, 0.7);
+    }
+    
+    .login-subheader {
+        color: #ff6666;
+        font-family: 'Orbitron', monospace;
+        font-size: 1rem;
+        margin-bottom: 2rem;
+        letter-spacing: 2px;
+    }
+    
+    .login-input {
+        background: rgba(0, 0, 0, 0.8);
+        border: 1px solid rgba(255, 0, 0, 0.5);
+        border-radius: 10px;
+        color: white;
+        font-family: 'Rajdhani', sans-serif;
+        padding: 0.75rem 1rem;
+        margin: 0.5rem 0;
+        width: 100%;
+        font-size: 1rem;
+    }
+    
+    .login-input:focus {
+        outline: none;
+        border-color: #ff0000;
+        box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+    }
+    
+    .login-button {
+        background: linear-gradient(90deg, #ff0000 0%, #cc0000 100%);
+        border: none;
+        border-radius: 25px;
+        color: #000000;
+        font-family: 'Orbitron', monospace;
+        font-weight: 700;
+        padding: 0.75rem 2rem;
+        margin: 1rem 0;
+        width: 100%;
+        transition: all 0.3s ease;
+        box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-size: 1.1rem;
+    }
+    
+    .login-button:hover {
+        background: linear-gradient(90deg, #ff4444 0%, #ff0000 100%);
+        transform: scale(1.05);
+        box-shadow: 0 0 30px rgba(255, 0, 0, 0.7);
+    }
+    
+    .logout-button {
+        background: linear-gradient(90deg, #ff0000 0%, #cc0000 100%);
+        border: none;
+        border-radius: 10px;
+        color: #000000;
+        font-family: 'Orbitron', monospace;
+        font-weight: 700;
+        padding: 0.5rem 1rem;
+        margin: 1rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-size: 0.8rem;
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        z-index: 1000;
+    }
+    
     /* Custom metric styling */
     [data-testid="stMetricValue"] {
         font-family: 'Orbitron', monospace;
@@ -251,6 +354,43 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
+# Simple authentication system
+def check_credentials(username, password):
+    """Check if username and password are correct"""
+    # In a real application, use proper password hashing and secure storage
+    valid_users = {
+        "godziller": "dragonfire2025",
+        "admin": "cryptoking",
+        "trader": "bullmarket"
+    }
+    return username in valid_users and valid_users[username] == password
+
+def login_page():
+    """Display login page"""
+    st.markdown('<div class="login-container">', unsafe_allow_html=True)
+    st.markdown('<div class="login-card">', unsafe_allow_html=True)
+    
+    st.markdown('<h1 class="login-header">🐲 GODZILLERS</h1>', unsafe_allow_html=True)
+    st.markdown('<p class="login-subheader">PRIVATE CRYPTO WARFARE SYSTEM</p>', unsafe_allow_html=True)
+    
+    with st.form("login_form"):
+        username = st.text_input("👤 DRAGON NAME", placeholder="Enter your dragon name...")
+        password = st.text_input("🔐 FIRE BREATH", type="password", placeholder="Enter your fire breath...")
+        
+        login_button = st.form_submit_button("🔥 IGNITE DRAGON FIRE", use_container_width=True)
+        
+        if login_button:
+            if check_credentials(username, password):
+                st.session_state.logged_in = True
+                st.session_state.username = username
+                st.success("✅ Dragon fire ignited! Access granted.")
+                st.rerun()
+            else:
+                st.error("❌ Invalid dragon name or fire breath!")
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 def get_crypto_prices():
     """Get crypto prices from multiple sources with fallback"""
@@ -544,10 +684,19 @@ def get_coin_emoji(symbol):
     }
     return emojis.get(symbol, '💀')
 
-def main():
+def main_app():
+    """Main application after login"""
     # Initialize analyzer
     analyzer = CryptoAnalyzer()
     
+    # Logout button
+    if st.button("🚪 LOGOUT", key="logout", use_container_width=False):
+        st.session_state.logged_in = False
+        st.session_state.username = None
+        st.rerun()
+    
+    # Welcome message
+    st.markdown(f'<p style="text-align: right; color: #ff4444; font-family: Orbitron; margin: 0.5rem 1rem;">Welcome, {st.session_state.username}!
     # GODZILLERS Header
     st.markdown('<h1 class="godzillers-header">🔥 GODZILLERS CRYPTO TRACKER</h1>', unsafe_allow_html=True)
     st.markdown('<p class="godzillers-subheader">Godzillers Eye SIGNALS • TOR PERCENTAGE ANALYSIS • RED HOT PRICES</p>', unsafe_allow_html=True)
@@ -828,6 +977,20 @@ def main():
     <p style="font-size: 0.7rem; color: #ff6666;">FORGE YOUR FORTUNE WITH DRAGON FIRE PRECISION</p>
     </div>
     """, unsafe_allow_html=True)
+
+def main():
+    """Main function with login check"""
+    # Initialize session state
+    if 'logged_in' not in st.session_state:
+        st.session_state.logged_in = False
+    if 'username' not in st.session_state:
+        st.session_state.username = None
+    
+    # Check if user is logged in
+    if not st.session_state.logged_in:
+        login_page()
+    else:
+        main_app()
 
 if __name__ == "__main__":
     main()
