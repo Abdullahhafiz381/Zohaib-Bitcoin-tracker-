@@ -460,27 +460,27 @@ class CryptoAnalyzer:
         tor_pct_change = current_tor_pct - previous_tor_pct
         
         # Enhanced signal logic based on Tor percentage change
-        if tor_pct_change > 1.5:  # Tor percentage increased by more than 1.5%
-            signal = "🔥 Godziller STRONG SELL 🔥"
-            bias = "VERY BEARISH"
-        elif tor_pct_change > 0.8:  # Tor percentage increased by 0.8-1.5%
-            signal = "🔥 Godziller SELL 🔥"
-            bias = "BEARISH"
-        elif tor_pct_change > 0.3:  # Tor percentage increased by 0.3-0.8%
-            signal = "SELL" 
-            bias = "SLIGHTLY BEARISH"
-        elif tor_pct_change < -1.5:  # Tor percentage decreased by more than 1.5%
-            signal = "🚀 Godziller STRONG BUY 🚀"
-            bias = "VERY BULLISH"
-        elif tor_pct_change < -0.8:  # Tor percentage decreased by 0.8-1.5%
-            signal = "🚀 Godziller BUY 🚀"
-            bias = "BULLISH"
-        elif tor_pct_change < -0.3:  # Tor percentage decreased by 0.3-0.8%
-            signal = "BUY"
-            bias = "SLIGHTLY BULLISH"
-        else:  # Small change (-0.3% to +0.3%)
-            signal = "HOLD"
-            bias = "NEUTRAL"
+if tor_pct_change >= 1.0:  # Tor percentage increased by 1.0% or more
+    signal = "🐲 GODZILLA DUMP 🐲"
+    bias = "EXTREME BEARISH"
+elif tor_pct_change >= 0.5:  # Tor percentage increased by 0.5-0.99%
+    signal = "🔥 STRONG SELL 🔥"
+    bias = "VERY BEARISH"
+elif tor_pct_change >= 0.1:  # Tor percentage increased by 0.1-0.49%
+    signal = "SELL"
+    bias = "BEARISH"
+elif tor_pct_change <= -1.0:  # Tor percentage decreased by 1.0% or more
+    signal = "🐲 GODZILLA PUMP 🐲"
+    bias = "EXTREME BULLISH"
+elif tor_pct_change <= -0.5:  # Tor percentage decreased by 0.5-0.99%
+    signal = "🚀 STRONG BUY 🚀"
+    bias = "VERY BULLISH"
+elif tor_pct_change <= -0.1:  # Tor percentage decreased by 0.1-0.49%
+    signal = "BUY"
+    bias = "BULLISH"
+else:  # Change between -0.1% and +0.1%
+    signal = "HOLD"
+    bias = "NEUTRAL"
         
         return {
             'current_tor_pct': current_tor_pct,
@@ -730,31 +730,35 @@ def main():
         
         st.markdown('</div>', unsafe_allow_html=True)
     
-    # MAIN SIGNAL DISPLAY WITH GODZILLERS THEME
-    if analyzer.current_data and analyzer.previous_data:
-        tor_signal_data = analyzer.calculate_tor_signal()
-        
-        # Display main signal with GODZILLERS styling
-        if "STRONG SELL" in tor_signal_data['signal']:
-            signal_class = "signal-sell"
-            emoji = "🐲🔥💀"
-            explanation = "Godzillers FIRE STRONG SELL - Tor percentage raging upward (Very Bearish)"
-        elif "SELL" in tor_signal_data['signal']:
-            signal_class = "signal-sell"
-            emoji = "🐲🔥"
-            explanation = "Tor percentage increasing - Prepare for battle (Bearish)"
-        elif "STRONG BUY" in tor_signal_data['signal']:
-            signal_class = "signal-buy"
-            emoji = "🐲🚀🌟"
-            explanation = "Godzillers FIRE STRONG BUY - Tor percentage retreating (Very Bullish)"
-        elif "BUY" in tor_signal_data['signal']:
-            signal_class = "signal-buy"
-            emoji = "🐲🚀"
-            explanation = "Tor percentage decreasing - Charge forward (Bullish)"
-        else:
-            signal_class = "signal-neutral"
-            emoji = "🐲⚡"
-            explanation = "Battlefield calm - Hold positions"
+    # Display main signal with GODZILLERS styling
+if "GODZILLA DUMP" in tor_signal_data['signal']:
+    signal_class = "signal-sell"
+    emoji = "🐲💀🔥"
+    explanation = "GODZILLA DUMP - Tor percentage exploding upward (Extreme Bearish)"
+elif "STRONG SELL" in tor_signal_data['signal']:
+    signal_class = "signal-sell"
+    emoji = "🐲🔥"
+    explanation = "Strong Sell - Tor percentage raging upward (Very Bearish)"
+elif "SELL" in tor_signal_data['signal']:
+    signal_class = "signal-sell"
+    emoji = "🔴"
+    explanation = "Sell - Tor percentage increasing (Bearish)"
+elif "GODZILLA PUMP" in tor_signal_data['signal']:
+    signal_class = "signal-buy"
+    emoji = "🐲🚀🌟"
+    explanation = "GODZILLA PUMP - Tor percentage collapsing (Extreme Bullish)"
+elif "STRONG BUY" in tor_signal_data['signal']:
+    signal_class = "signal-buy"
+    emoji = "🐲🚀"
+    explanation = "Strong Buy - Tor percentage retreating (Very Bullish)"
+elif "BUY" in tor_signal_data['signal']:
+    signal_class = "signal-buy"
+    emoji = "🟢"
+    explanation = "Buy - Tor percentage decreasing (Bullish)"
+else:
+    signal_class = "signal-neutral"
+    emoji = "🐲⚡"
+    explanation = "Battlefield calm - Tor percentage stable (Neutral)"
         
         st.markdown(f'<div class="{signal_class}">', unsafe_allow_html=True)
         st.markdown(f'<h2 style="font-family: Orbitron; text-align: center; margin: 0.5rem 0;">{emoji} {tor_signal_data["signal"]} {emoji}</h2>', unsafe_allow_html=True)
