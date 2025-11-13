@@ -6,8 +6,6 @@ import os
 from datetime import datetime, timedelta
 import plotly.graph_objects as go
 import plotly.express as px
-import hashlib
-import hmac
 
 # GODZILLERS Streamlit setup
 st.set_page_config(
@@ -17,10 +15,19 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# GODZILLERS CSS with red and black theme
+# GODZILLERS CSS with red and black theme - UPDATED FOR BETTER LOGIN
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
+    /* Hide all Streamlit elements on login page */
+    .login-page .main > div {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    
+    .login-page #MainMenu {visibility: hidden;}
+    .login-page header {visibility: hidden;}
+    .login-page footer {visibility: hidden;}
+    .login-page .stAppView {padding: 0 !important; margin: 0 !important;}
     
     .main {
         background: linear-gradient(135deg, #000000 0%, #1a0000 50%, #330000 100%);
@@ -230,20 +237,14 @@ st.markdown("""
         animation: pulse 2s infinite;
     }
     
-    /* Login Page Styles - FIXED FOR BETTER VISIBILITY */
+    /* Login Page Styles - SIMPLIFIED AND CENTERED */
     .login-container {
         display: flex;
         justify-content: center;
         align-items: center;
-        height: 100vh;
+        min-height: 100vh;
         background: linear-gradient(135deg, #000000 0%, #1a0000 50%, #330000 100%);
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        z-index: 9999;
-        padding: 2rem;
+        padding: 20px;
     }
     
     .login-card {
@@ -256,7 +257,6 @@ st.markdown("""
         max-width: 450px;
         box-shadow: 0 0 50px rgba(255, 0, 0, 0.5);
         text-align: center;
-        margin: auto;
     }
     
     .login-header {
@@ -339,11 +339,6 @@ st.markdown("""
         z-index: 1000;
     }
     
-    /* Hide Streamlit default elements on login page */
-    .login-page #MainMenu {visibility: hidden;}
-    .login-page header {visibility: hidden;}
-    .login-page .stAppView {padding: 0;}
-    
     /* Custom metric styling */
     [data-testid="stMetricValue"] {
         font-family: 'Orbitron', monospace;
@@ -380,42 +375,65 @@ def check_credentials(username, password):
     return username in valid_users and valid_users[username] == password
 
 def login_page():
-    """Display login page"""
-    # Add CSS to hide Streamlit elements and center login
+    """Display login page - SIMPLIFIED VERSION"""
+    # Clear any existing content
     st.markdown("""
     <style>
-    .login-page #MainMenu {visibility: hidden;}
-    .login-page header {visibility: hidden;}
-    .login-page .stAppView {padding: 0; margin: 0;}
+    .main .block-container {
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+    }
     </style>
     """, unsafe_allow_html=True)
     
-    # Create login container
-    st.markdown('<div class="login-page">', unsafe_allow_html=True)
-    st.markdown('<div class="login-container">', unsafe_allow_html=True)
-    st.markdown('<div class="login-card">', unsafe_allow_html=True)
+    # Create centered login form directly
+    col1, col2, col3 = st.columns([1, 2, 1])
     
-    st.markdown('<h1 class="login-header">🐲 GODZILLERS</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="login-subheader">PRIVATE CRYPTO WARFARE SYSTEM</p>', unsafe_allow_html=True)
-    
-    with st.form("login_form"):
-        username = st.text_input("👤 DRAGON NAME", placeholder="Enter your dragon name...")
-        password = st.text_input("🔐 FIRE BREATH", type="password", placeholder="Enter your fire breath...")
+    with col2:
+        st.markdown("""
+        <div style='
+            background: rgba(20, 0, 0, 0.95);
+            border: 2px solid rgba(255, 0, 0, 0.6);
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 0 50px rgba(255, 0, 0, 0.5);
+            text-align: center;
+            margin: 2rem 0;
+        '>
+            <h1 style='
+                background: linear-gradient(90deg, #ff0000 0%, #ff4444 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                font-family: Orbitron, monospace;
+                font-weight: 900;
+                font-size: 2.5rem;
+                margin-bottom: 1rem;
+                text-shadow: 0 0 20px rgba(255, 0, 0, 0.7);
+            '>🐲 GODZILLERS</h1>
+            <p style='
+                color: #ff6666;
+                font-family: Orbitron, monospace;
+                font-size: 1rem;
+                margin-bottom: 2rem;
+                letter-spacing: 2px;
+            '>PRIVATE CRYPTO WARFARE SYSTEM</p>
+        </div>
+        """, unsafe_allow_html=True)
         
-        login_button = st.form_submit_button("🔥 IGNITE DRAGON FIRE", use_container_width=True)
-        
-        if login_button:
-            if check_credentials(username, password):
-                st.session_state.logged_in = True
-                st.session_state.username = username
-                st.success("✅ Dragon fire ignited! Access granted.")
-                st.rerun()
-            else:
-                st.error("❌ Invalid dragon name or fire breath!")
-    
-    st.markdown('</div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+        with st.form("login_form"):
+            username = st.text_input("👤 DRAGON NAME", placeholder="Enter your dragon name...")
+            password = st.text_input("🔐 FIRE BREATH", type="password", placeholder="Enter your fire breath...")
+            
+            login_button = st.form_submit_button("🔥 IGNITE DRAGON FIRE", use_container_width=True)
+            
+            if login_button:
+                if check_credentials(username, password):
+                    st.session_state.logged_in = True
+                    st.session_state.username = username
+                    st.success("✅ Dragon fire ignited! Access granted.")
+                    st.rerun()
+                else:
+                    st.error("❌ Invalid dragon name or fire breath!")
 
 def get_crypto_prices():
     """Get crypto prices from multiple sources with fallback"""
@@ -1004,19 +1022,5 @@ def main_app():
     </div>
     """, unsafe_allow_html=True)
 
-def main():
-    """Main function with login check"""
-    # Initialize session state
-    if 'logged_in' not in st.session_state:
-        st.session_state.logged_in = False
-    if 'username' not in st.session_state:
-        st.session_state.username = None
-    
-    # Check if user is logged in
-    if not st.session_state.logged_in:
-        login_page()
-    else:
-        main_app()
-
-if __name__ == "__main__":
+ if __name__ == "__main__":
     main()
