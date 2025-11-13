@@ -230,13 +230,20 @@ st.markdown("""
         animation: pulse 2s infinite;
     }
     
-    /* Login Page Styles */
+    /* Login Page Styles - FIXED FOR BETTER VISIBILITY */
     .login-container {
         display: flex;
         justify-content: center;
         align-items: center;
-        min-height: 100vh;
+        height: 100vh;
         background: linear-gradient(135deg, #000000 0%, #1a0000 50%, #330000 100%);
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 9999;
+        padding: 2rem;
     }
     
     .login-card {
@@ -249,6 +256,7 @@ st.markdown("""
         max-width: 450px;
         box-shadow: 0 0 50px rgba(255, 0, 0, 0.5);
         text-align: center;
+        margin: auto;
     }
     
     .login-header {
@@ -331,6 +339,11 @@ st.markdown("""
         z-index: 1000;
     }
     
+    /* Hide Streamlit default elements on login page */
+    .login-page #MainMenu {visibility: hidden;}
+    .login-page header {visibility: hidden;}
+    .login-page .stAppView {padding: 0;}
+    
     /* Custom metric styling */
     [data-testid="stMetricValue"] {
         font-family: 'Orbitron', monospace;
@@ -368,6 +381,17 @@ def check_credentials(username, password):
 
 def login_page():
     """Display login page"""
+    # Add CSS to hide Streamlit elements and center login
+    st.markdown("""
+    <style>
+    .login-page #MainMenu {visibility: hidden;}
+    .login-page header {visibility: hidden;}
+    .login-page .stAppView {padding: 0; margin: 0;}
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Create login container
+    st.markdown('<div class="login-page">', unsafe_allow_html=True)
     st.markdown('<div class="login-container">', unsafe_allow_html=True)
     st.markdown('<div class="login-card">', unsafe_allow_html=True)
     
@@ -375,10 +399,10 @@ def login_page():
     st.markdown('<p class="login-subheader">PRIVATE CRYPTO WARFARE SYSTEM</p>', unsafe_allow_html=True)
     
     with st.form("login_form"):
-        username = st.text_input("👤 Godzilla NAME", placeholder="Enter your Godzilla name...")
-        password = st.text_input("🔐 Godzilla Key", type="password", placeholder="Enter your Godzilla Key...")
+        username = st.text_input("👤 DRAGON NAME", placeholder="Enter your dragon name...")
+        password = st.text_input("🔐 FIRE BREATH", type="password", placeholder="Enter your fire breath...")
         
-        login_button = st.form_submit_button("🔥 IGNITE Your loss ", use_container_width=True)
+        login_button = st.form_submit_button("🔥 IGNITE DRAGON FIRE", use_container_width=True)
         
         if login_button:
             if check_credentials(username, password):
@@ -389,6 +413,7 @@ def login_page():
             else:
                 st.error("❌ Invalid dragon name or fire breath!")
     
+    st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -695,7 +720,7 @@ def main_app():
         st.session_state.username = None
         st.rerun()
     
-    # Welcome message - FIXED THIS LINE
+    # Welcome message
     st.markdown(f'<p style="text-align: right; color: #ff4444; font-family: Orbitron; margin: 0.5rem 1rem;">Welcome, {st.session_state.username}!</p>', unsafe_allow_html=True)
     
     # GODZILLERS Header
