@@ -392,14 +392,14 @@ class CryptoAnalyzer:
         
         alerts = []
         
-        # Check for major Tor node changes
-        tor_change = current['tor_nodes'] - previous['tor_nodes']
-        if abs(tor_change) > 20:
+        # Check for major Tor percentage changes
+        tor_percentage_change = current['tor_percentage'] - previous['tor_percentage']
+        if abs(tor_percentage_change) > 1.0:
             alerts.append({
-                'type': 'TOR_SURGE' if tor_change > 0 else 'TOR_DROP',
-                'message': f"🚨 MAJOR TOR {'SURGE' if tor_change > 0 else 'DROP'}! {abs(tor_change):+} nodes",
+                'type': 'TOR_PERCENTAGE_SURGE' if tor_percentage_change > 0 else 'TOR_PERCENTAGE_DROP',
+                'message': f"🚨 MAJOR TOR PERCENTAGE {'SURGE' if tor_percentage_change > 0 else 'DROP'}! {tor_percentage_change:+.2f}%",
                 'severity': 'HIGH',
-                'change': tor_change
+                'change': tor_percentage_change
             })
         
         # Check for network size changes
@@ -441,45 +441,51 @@ class CryptoAnalyzer:
         return True
     
     def calculate_tor_signal(self):
-        """Calculate signal based on difference between current and previous Tor nodes"""
+        """Calculate signal based on Tor percentage changes"""
         if not self.current_data or not self.previous_data:
-            current_tor = self.current_data['tor_nodes'] if self.current_data else 0
-            previous_tor = self.previous_data['tor_nodes'] if self.previous_data else 0
+            current_tor_pct = self.current_data['tor_percentage'] if self.current_data else 0
+            previous_tor_pct = self.previous_data['tor_percentage'] if self.previous_data else 0
             return {
-                'current_tor': current_tor,
-                'previous_tor': previous_tor,
-                'tor_change': 0,
+                'current_tor_pct': current_tor_pct,
+                'previous_tor_pct': previous_tor_pct,
+                'tor_pct_change': 0,
                 'signal': "INSUFFICIENT_DATA",
                 'bias': "NEED MORE DATA"
             }
         
-        current_tor = self.current_data['tor_nodes']
-        previous_tor = self.previous_data['tor_nodes']
+        current_tor_pct = self.current_data['tor_percentage']
+        previous_tor_pct = self.previous_data['tor_percentage']
         
-        # Calculate absolute change in Tor nodes
-        tor_change = current_tor - previous_tor
+        # Calculate percentage change in Tor nodes
+        tor_pct_change = current_tor_pct - previous_tor_pct
         
-        # Simple signal logic based on Tor node change
-        if tor_change > 10:  # Tor nodes increased by more than 10
+        # Enhanced signal logic based on Tor percentage change
+        if tor_pct_change > 1.5:  # Tor percentage increased by more than 1.5%
+            signal = "🔥 Godziller STRONG SELL 🔥"
+            bias = "VERY BEARISH"
+        elif tor_pct_change > 0.8:  # Tor percentage increased by 0.8-1.5%
             signal = "🔥 Godziller SELL 🔥"
             bias = "BEARISH"
-        elif tor_change > 5:  # Tor nodes increased by 6-10
+        elif tor_pct_change > 0.3:  # Tor percentage increased by 0.3-0.8%
             signal = "SELL" 
             bias = "SLIGHTLY BEARISH"
-        elif tor_change < -10:  # Tor nodes decreased by more than 10
+        elif tor_pct_change < -1.5:  # Tor percentage decreased by more than 1.5%
+            signal = "🚀 Godziller STRONG BUY 🚀"
+            bias = "VERY BULLISH"
+        elif tor_pct_change < -0.8:  # Tor percentage decreased by 0.8-1.5%
             signal = "🚀 Godziller BUY 🚀"
             bias = "BULLISH"
-        elif tor_change < -5:  # Tor nodes decreased by 6-10
+        elif tor_pct_change < -0.3:  # Tor percentage decreased by 0.3-0.8%
             signal = "BUY"
             bias = "SLIGHTLY BULLISH"
-        else:  # Small change (-5 to +5)
+        else:  # Small change (-0.3% to +0.3%)
             signal = "HOLD"
             bias = "NEUTRAL"
         
         return {
-            'current_tor': current_tor,
-            'previous_tor': previous_tor,
-            'tor_change': tor_change,
+            'current_tor_pct': current_tor_pct,
+            'previous_tor_pct': previous_tor_pct,
+            'tor_pct_change': tor_pct_change,
             'signal': signal,
             'bias': bias
         }
@@ -545,7 +551,7 @@ def main():
     
     # GODZILLERS Header
     st.markdown('<h1 class="godzillers-header">🔥 GODZILLERS CRYPTO TRACKER</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="godzillers-subheader">Godzillers Eye SIGNALS • RED HOT PRICES • TOR NETWORK ANALYSIS</p>', unsafe_allow_html=True)
+    st.markdown('<p class="godzillers-subheader">Godzillers Eye SIGNALS • TOR PERCENTAGE ANALYSIS • RED HOT PRICES</p>', unsafe_allow_html=True)
     
     # BITNODE SNAPSHOT ALERTS SECTION
     if analyzer.current_data and analyzer.previous_data:
@@ -660,7 +666,7 @@ def main():
         current_time = datetime.fromisoformat(analyzer.current_data['timestamp'])
         st.markdown(f'<p style="text-align: center; color: #ff4444; font-family: Rajdhani;">📊 Current data from: {current_time.strftime("%Y-%m-%d %H:%M:%S")}</p>', unsafe_allow_html=True)
     
-    # TOR NODE SIGNAL ANALYSIS
+    # TOR PERCENTAGE SIGNAL ANALYSIS
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
     st.markdown('<h2 class="section-header">🎯 Godzillers Eye SIGNALS</h2>', unsafe_allow_html=True)
     
@@ -668,32 +674,32 @@ def main():
     col1, col2 = st.columns([1, 1])
     
     with col1:
-        # TOR NODE COMPARISON
+        # TOR PERCENTAGE COMPARISON
         st.markdown('<div class="godzillers-card">', unsafe_allow_html=True)
-        st.markdown('<h3 style="font-family: Orbitron; color: #ff4444; text-align: center;">🔄 NODE BATTLEFIELD</h3>', unsafe_allow_html=True)
+        st.markdown('<h3 style="font-family: Orbitron; color: #ff4444; text-align: center;">🔄 TOR PERCENTAGE BATTLE</h3>', unsafe_allow_html=True)
         
         tor_signal = analyzer.calculate_tor_signal()
         network_signal = analyzer.calculate_network_signal()
         
-        # Display node comparison
+        # Display percentage comparison
         if analyzer.previous_data:
             col1a, col2a = st.columns(2)
             
             with col1a:
-                st.metric("🕒 PREVIOUS TOR NODES", f"{tor_signal['previous_tor']:,}")
+                st.metric("🕒 PREVIOUS TOR %", f"{tor_signal['previous_tor_pct']:.2f}%")
                 st.metric("🕒 PREVIOUS TOTAL NODES", f"{network_signal['previous_total']:,}")
             
             with col2a:
-                st.metric("🔥 CURRENT TOR NODES", f"{tor_signal['current_tor']:,}")
+                st.metric("🔥 CURRENT TOR %", f"{tor_signal['current_tor_pct']:.2f}%")
                 st.metric("🔥 CURRENT TOTAL NODES", f"{network_signal['current_total']:,}")
             
             # Display changes
             st.markdown('<div style="text-align: center; margin: 1rem 0;">', unsafe_allow_html=True)
-            st.metric("📈 TOR NODE CHANGE", f"{tor_signal['tor_change']:+,}", delta="nodes")
+            st.metric("📈 TOR % CHANGE", f"{tor_signal['tor_pct_change']:+.2f}%", delta="percentage points")
             st.metric("📈 TOTAL NODE CHANGE", f"{network_signal['total_change']:+,}", delta="nodes")
             st.markdown('</div>', unsafe_allow_html=True)
         else:
-            st.info("🔥 Update node data to see battlefield comparison")
+            st.info("🔥 Update node data to see percentage comparison")
         
         st.markdown('</div>', unsafe_allow_html=True)
     
@@ -729,31 +735,31 @@ def main():
         tor_signal_data = analyzer.calculate_tor_signal()
         
         # Display main signal with GODZILLERS styling
-        if "Godziller SELL" in tor_signal_data['signal']:
+        if "STRONG SELL" in tor_signal_data['signal']:
             signal_class = "signal-sell"
-            emoji = "🐲🔥"
-            explanation = "Godzillers FIRE SELL - Tor nodes raging upward (Bearish)"
+            emoji = "🐲🔥💀"
+            explanation = "Godzillers FIRE STRONG SELL - Tor percentage raging upward (Very Bearish)"
         elif "SELL" in tor_signal_data['signal']:
             signal_class = "signal-sell"
-            emoji = "🔴"
-            explanation = "Tor nodes increasing - Prepare for battle (Bearish)"
-        elif "Godziller BUY" in tor_signal_data['signal']:
+            emoji = "🐲🔥"
+            explanation = "Tor percentage increasing - Prepare for battle (Bearish)"
+        elif "STRONG BUY" in tor_signal_data['signal']:
             signal_class = "signal-buy"
-            emoji = "🐲🚀"
-            explanation = "Godzillers FIRE BUY - Tor nodes retreating (Bullish)"
+            emoji = "🐲🚀🌟"
+            explanation = "Godzillers FIRE STRONG BUY - Tor percentage retreating (Very Bullish)"
         elif "BUY" in tor_signal_data['signal']:
             signal_class = "signal-buy"
-            emoji = "🟢" 
-            explanation = "Tor nodes decreasing - Charge forward (Bullish)"
+            emoji = "🐲🚀"
+            explanation = "Tor percentage decreasing - Charge forward (Bullish)"
         else:
             signal_class = "signal-neutral"
-            emoji = "🟡"
+            emoji = "🐲⚡"
             explanation = "Battlefield calm - Hold positions"
         
         st.markdown(f'<div class="{signal_class}">', unsafe_allow_html=True)
         st.markdown(f'<h2 style="font-family: Orbitron; text-align: center; margin: 0.5rem 0;">{emoji} {tor_signal_data["signal"]} {emoji}</h2>', unsafe_allow_html=True)
         st.markdown(f'<p style="text-align: center; color: #ff8888; font-family: Rajdhani; margin: 0.5rem 0;">{explanation}</p>', unsafe_allow_html=True)
-        st.markdown(f'<p style="text-align: center; font-family: Orbitron; color: #ffffff; margin: 0.5rem 0;">Tor Node Change: {tor_signal_data["tor_change"]:+,} nodes</p>', unsafe_allow_html=True)
+        st.markdown(f'<p style="text-align: center; font-family: Orbitron; color: #ffffff; margin: 0.5rem 0;">Tor % Change: {tor_signal_data["tor_pct_change"]:+.2f}%</p>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
     
     # MULTI-COIN SIGNALS
@@ -763,7 +769,7 @@ def main():
     if analyzer.current_data and analyzer.previous_data:
         tor_signal_data = analyzer.calculate_tor_signal()
         
-        # Apply Tor trend analysis to remaining coins
+        # Apply Tor percentage trend analysis to remaining coins
         coins_list = [
             'BTCUSDT', 'ETHUSDT', 'SOLUSDT', 
             'ADAUSDT', 'DOTUSDT', 'LINKUSDT'
@@ -779,7 +785,7 @@ def main():
                     name = get_coin_display_name(symbol)
                     price = prices[symbol]
                     
-                    # Apply the same Tor signal to all coins
+                    # Apply the same Tor percentage signal to all coins
                     if "SELL" in tor_signal_data['signal']:
                         signal_class = "signal-sell"
                         signal_text = tor_signal_data['signal']
@@ -799,7 +805,7 @@ def main():
                             <h4 style="font-family: Orbitron; margin: 0.5rem 0; font-size: 1.1rem;">{emoji} {name}</h4>
                             <p style="font-family: Orbitron; font-size: 1.2rem; font-weight: 700; margin: 0.5rem 0;">${price:,.2f}</p>
                             <p style="font-family: Orbitron; font-size: 1rem; margin: 0.5rem 0;">{signal_emoji} {signal_text}</p>
-                            <p style="color: #ff8888; font-family: Rajdhani; font-size: 0.8rem; margin: 0;">Δ Tor: {tor_signal_data['tor_change']:+,}</p>
+                            <p style="color: #ff8888; font-family: Rajdhani; font-size: 0.8rem; margin: 0;">Δ Tor %: {tor_signal_data['tor_pct_change']:+.2f}%</p>
                         </div>
                     </div>
                     ''', unsafe_allow_html=True)
@@ -811,7 +817,7 @@ def main():
     st.markdown("""
     <div class="trademark">
     <p>🔥 GODZILLERS CRYPTO WARFARE SYSTEM 🔥</p>
-    <p>© 2025 GODZILLERS CRYPTO TRACKER • DRAGON FIRE SIGNAL TECHNOLOGY</p>
+    <p>© 2025 GODZILLERS CRYPTO TRACKER • TOR PERCENTAGE SIGNAL TECHNOLOGY</p>
     <p style="font-size: 0.7rem; color: #ff6666;">FORGE YOUR FORTUNE WITH DRAGON FIRE PRECISION</p>
     </div>
     """, unsafe_allow_html=True)
