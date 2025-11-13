@@ -375,10 +375,10 @@ def login_page():
     st.markdown('<p class="login-subheader">PRIVATE CRYPTO WARFARE SYSTEM</p>', unsafe_allow_html=True)
     
     with st.form("login_form"):
-        username = st.text_input("👤 DRAGON NAME", placeholder="Enter your dragon name...")
-        password = st.text_input("🔐 FIRE BREATH", type="password", placeholder="Enter your fire breath...")
+        username = st.text_input("👤 Godzilla NAME", placeholder="Enter your Godzilla name...")
+        password = st.text_input("🔐 Godzilla Key", type="password", placeholder="Enter your Godzilla Key...")
         
-        login_button = st.form_submit_button("🔥 IGNITE DRAGON FIRE", use_container_width=True)
+        login_button = st.form_submit_button("🔥 IGNITE Your loss ", use_container_width=True)
         
         if login_button:
             if check_credentials(username, password):
