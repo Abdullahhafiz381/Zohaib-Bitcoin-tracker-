@@ -441,8 +441,6 @@ def get_crypto_prices():
         'BTCUSDT': 'bitcoin',
         'ETHUSDT': 'ethereum', 
         'SOLUSDT': 'solana',
-        'ADAUSDT': 'cardano',
-        'DOTUSDT': 'polkadot',
         'LINKUSDT': 'chainlink'
     }
     
@@ -709,8 +707,6 @@ def get_coin_display_name(symbol):
         'BTCUSDT': 'Bitcoin',
         'ETHUSDT': 'Ethereum',
         'SOLUSDT': 'Solana',
-        'ADAUSDT': 'Cardano',
-        'DOTUSDT': 'Polkadot',
         'LINKUSDT': 'Chainlink'
     }
     return names.get(symbol, symbol)
@@ -721,8 +717,6 @@ def get_coin_emoji(symbol):
         'BTCUSDT': '🐲',
         'ETHUSDT': '🔥',
         'SOLUSDT': '🌋',
-        'ADAUSDT': '🎯',
-        'DOTUSDT': '🔴',
         'LINKUSDT': '🔗'
     }
     return emojis.get(symbol, '💀')
@@ -972,15 +966,15 @@ def main_app():
         # Apply Tor percentage trend analysis to remaining coins
         coins_list = [
             'BTCUSDT', 'ETHUSDT', 'SOLUSDT', 
-            'ADAUSDT', 'DOTUSDT', 'LINKUSDT'
+            'LINKUSDT'
         ]
         
-        # Create columns for coin signals (3 columns for cleaner layout)
-        signal_cols = st.columns(3)
+        # Create columns for coin signals (2 columns for cleaner layout with 4 coins)
+        signal_cols = st.columns(2)
         
         for idx, symbol in enumerate(coins_list):
             if prices.get(symbol):
-                with signal_cols[idx % 3]:
+                with signal_cols[idx % 2]:
                     emoji = get_coin_emoji(symbol)
                     name = get_coin_display_name(symbol)
                     price = prices[symbol]
