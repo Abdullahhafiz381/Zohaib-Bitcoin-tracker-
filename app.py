@@ -439,9 +439,7 @@ def get_crypto_prices():
     """Get crypto prices from multiple sources with fallback"""
     coins = {
         'BTCUSDT': 'bitcoin',
-        'ETHUSDT': 'ethereum', 
-        'SOLUSDT': 'solana',
-        'LINKUSDT': 'chainlink'
+        'ETHUSDT': 'ethereum'
     }
     
     prices = {}
@@ -705,9 +703,7 @@ def get_coin_display_name(symbol):
     """Get display name for crypto symbols"""
     names = {
         'BTCUSDT': 'Bitcoin',
-        'ETHUSDT': 'Ethereum',
-        'SOLUSDT': 'Solana',
-        'LINKUSDT': 'Chainlink'
+        'ETHUSDT': 'Ethereum'
     }
     return names.get(symbol, symbol)
 
@@ -715,9 +711,7 @@ def get_coin_emoji(symbol):
     """Get emoji for crypto symbols - GODZILLERS theme"""
     emojis = {
         'BTCUSDT': '🐲',
-        'ETHUSDT': '🔥',
-        'SOLUSDT': '🌋',
-        'LINKUSDT': '🔗'
+        'ETHUSDT': '🔥'
     }
     return emojis.get(symbol, '💀')
 
@@ -809,12 +803,12 @@ def main_app():
         # Create columns for coin grid
         coins_to_display = {k: v for k, v in prices.items() if k != 'BTCUSDT' and v and v > 0}
         if coins_to_display:
-            # Use 3 columns for cleaner layout with fewer coins
-            cols = st.columns(3)
+            # Use 2 columns for cleaner layout with fewer coins
+            cols = st.columns(2)
             
             for idx, (symbol, price) in enumerate(coins_to_display.items()):
                 if price:
-                    with cols[idx % 3]:
+                    with cols[idx % 2]:
                         emoji = get_coin_emoji(symbol)
                         name = get_coin_display_name(symbol)            
                         st.markdown(f'''
@@ -965,11 +959,10 @@ def main_app():
         
         # Apply Tor percentage trend analysis to remaining coins
         coins_list = [
-            'BTCUSDT', 'ETHUSDT', 'SOLUSDT', 
-            'LINKUSDT'
+            'BTCUSDT', 'ETHUSDT'
         ]
         
-        # Create columns for coin signals (2 columns for cleaner layout with 4 coins)
+        # Create columns for coin signals (2 columns for cleaner layout)
         signal_cols = st.columns(2)
         
         for idx, symbol in enumerate(coins_list):
