@@ -952,7 +952,7 @@ def main_app():
     
     # MULTI-COIN SIGNALS
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-    st.markdown('<h2 class="section-header">🎯 Godzillers ARMY SIGNALS</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-header">🐉 Godzillers ARMY SIGNALS</h2>', unsafe_allow_html=True)
     
     if analyzer.current_data and analyzer.previous_data:
         tor_signal_data = analyzer.calculate_tor_signal()
