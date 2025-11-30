@@ -6,6 +6,8 @@ import os
 from datetime import datetime, timedelta
 import plotly.graph_objects as go
 import plotly.express as px
+import numpy as np
+import time
 
 # GODZILLERS Streamlit setup
 st.set_page_config(
@@ -104,6 +106,22 @@ st.markdown("""
         padding: 1.5rem;
         margin: 0.5rem 0;
         box-shadow: 0 0 20px rgba(255, 165, 0, 0.3);
+    }
+    
+    .scalp-signal-urgent {
+        background: linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 140, 0, 0.4) 100%);
+        border: 2px solid #ffd700;
+        border-radius: 12px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        box-shadow: 0 0 25px rgba(255, 215, 0, 0.6);
+        animation: pulse-urgent 1s infinite;
+    }
+    
+    @keyframes pulse-urgent {
+        0% { box-shadow: 0 0 25px rgba(255, 215, 0, 0.6); }
+        50% { box-shadow: 0 0 40px rgba(255, 215, 0, 0.9); }
+        100% { box-shadow: 0 0 25px rgba(255, 215, 0, 0.6); }
     }
     
     .price-glow {
@@ -482,10 +500,117 @@ def get_crypto_prices():
     
     return prices
 
+class EMAScalpingAnalyzer:
+    def __init__(self):
+        self.ema_fast = 9
+        self.ema_slow = 21
+        self.ema_signal = 50
+        self.price_history = {}
+    
+    def calculate_ema(self, prices, period):
+        """Calculate Exponential Moving Average"""
+        if len(prices) < period:
+            return None
+        
+        alpha = 2 / (period + 1)
+        ema = prices[0]
+        
+        for price in prices[1:]:
+            ema = price * alpha + ema * (1 - alpha)
+        
+        return ema
+    
+    def get_historical_data(self, symbol, limit=100):
+        """Get historical price data for EMA calculation"""
+        try:
+            # Using Binance API for historical data
+            url = f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval=1m&limit={limit}"
+            response = requests.get(url, timeout=5)
+            
+            if response.status_code == 200:
+                data = response.json()
+                closes = [float(candle[4]) for candle in data]  # Close prices
+                return closes
+            else:
+                return None
+        except Exception as e:
+            return None
+    
+    def generate_scalp_signal(self, symbol, current_price):
+        """Generate 1-minute scalp signal based on EMA crossover"""
+        try:
+            # Get historical data
+            historical_data = self.get_historical_data(symbol, 100)
+            
+            if not historical_data or len(historical_data) < self.ema_signal:
+                return {
+                    'signal': 'NO_DATA',
+                    'strength': 'NEUTRAL',
+                    'fast_ema': 0,
+                    'slow_ema': 0,
+                    'signal_ema': 0,
+                    'trend': 'SIDEWAYS'
+                }
+            
+            # Calculate EMAs
+            fast_ema = self.calculate_ema(historical_data[-self.ema_fast:], self.ema_fast)
+            slow_ema = self.calculate_ema(historical_data[-self.ema_slow:], self.ema_slow)
+            signal_ema = self.calculate_ema(historical_data[-self.ema_signal:], self.ema_signal)
+            
+            if not all([fast_ema, slow_ema, signal_ema]):
+                return {
+                    'signal': 'NO_DATA',
+                    'strength': 'NEUTRAL',
+                    'fast_ema': 0,
+                    'slow_ema': 0,
+                    'signal_ema': 0,
+                    'trend': 'SIDEWAYS'
+                }
+            
+            # Determine trend based on signal EMA
+            if current_price > signal_ema:
+                trend = "BULLISH"
+            elif current_price < signal_ema:
+                trend = "BEARISH"
+            else:
+                trend = "SIDEWAYS"
+            
+            # Generate scalp signal
+            if fast_ema > slow_ema and trend == "BULLISH":
+                signal = "SCALP_LONG"
+                strength = "STRONG" if (fast_ema - slow_ema) / slow_ema > 0.001 else "MODERATE"
+            elif fast_ema < slow_ema and trend == "BEARISH":
+                signal = "SCALP_SHORT"
+                strength = "STRONG" if (slow_ema - fast_ema) / fast_ema > 0.001 else "MODERATE"
+            else:
+                signal = "NO_SCALP"
+                strength = "NEUTRAL"
+            
+            return {
+                'signal': signal,
+                'strength': strength,
+                'fast_ema': fast_ema,
+                'slow_ema': slow_ema,
+                'signal_ema': signal_ema,
+                'trend': trend,
+                'price_vs_fast': current_price - fast_ema
+            }
+            
+        except Exception as e:
+            return {
+                'signal': 'ERROR',
+                'strength': 'NEUTRAL',
+                'fast_ema': 0,
+                'slow_ema': 0,
+                'signal_ema': 0,
+                'trend': 'SIDEWAYS'
+            }
+
 class CryptoAnalyzer:
     def __init__(self, data_file="network_data.json"):
         self.data_file = data_file
         self.bitnodes_api = "https://bitnodes.io/api/v1/snapshots/latest/"
+        self.scalp_analyzer = EMAScalpingAnalyzer()
         self.load_node_data()
     
     def load_node_data(self):
@@ -560,48 +685,6 @@ class CryptoAnalyzer:
             st.error(f"Error fetching node data: {e}")
             return None
     
-    def check_snapshot_alert(self):
-        """Check for significant changes that should trigger alerts"""
-        if not self.current_data or not self.previous_data:
-            return None
-        
-        current = self.current_data
-        previous = self.previous_data
-        
-        alerts = []
-        
-        # Check for major Tor percentage changes
-        tor_percentage_change = current['tor_percentage'] - previous['tor_percentage']
-        if abs(tor_percentage_change) > 1.0:
-            alerts.append({
-                'type': 'TOR_PERCENTAGE_SURGE' if tor_percentage_change > 0 else 'TOR_PERCENTAGE_DROP',
-                'message': f"🚨 MAJOR TOR PERCENTAGE {'SURGE' if tor_percentage_change > 0 else 'DROP'}! {tor_percentage_change:+.2f}%",
-                'severity': 'HIGH',
-                'change': tor_percentage_change
-            })
-        
-        # Check for network size changes
-        total_change = current['total_nodes'] - previous['total_nodes']
-        if abs(total_change) > 100:
-            alerts.append({
-                'type': 'NETWORK_GROWTH' if total_change > 0 else 'NETWORK_DECLINE',
-                'message': f"🌐 NETWORK {'EXPANSION' if total_change > 0 else 'SHRINKAGE'}! {abs(total_change):+} total nodes",
-                'severity': 'MEDIUM',
-                'change': total_change
-            })
-        
-        # Check for significant active ratio changes
-        active_ratio_change = current['active_ratio'] - previous['active_ratio']
-        if abs(active_ratio_change) > 0.1:
-            alerts.append({
-                'type': 'ACTIVITY_SURGE' if active_ratio_change > 0 else 'ACTIVITY_DROP',
-                'message': f"⚡ NETWORK ACTIVITY {'SURGE' if active_ratio_change > 0 else 'DROP'}! {active_ratio_change:+.3f} ratio change",
-                'severity': 'HIGH',
-                'change': active_ratio_change
-            })
-        
-        return alerts if alerts else None
-    
     def update_node_data(self):
         """Fetch new data and shift current to previous"""
         new_data = self.fetch_node_data()
@@ -619,16 +702,12 @@ class CryptoAnalyzer:
         return True
     
     def calculate_tor_signal(self):
-        """Calculate signal based on Tor percentage changes"""
+        """Calculate signal based on Tor percentage changes - HIDDEN ANALYSIS"""
         if not self.current_data or not self.previous_data:
-            current_tor_pct = self.current_data['tor_percentage'] if self.current_data else 0
-            previous_tor_pct = self.previous_data['tor_percentage'] if self.previous_data else 0
             return {
-                'current_tor_pct': current_tor_pct,
-                'previous_tor_pct': previous_tor_pct,
-                'tor_pct_change': 0,
-                'signal': "INSUFFICIENT_DATA",
-                'bias': "NEED MORE DATA"
+                'signal': "🔄 NEED DATA",
+                'bias': "UPDATE REQUIRED",
+                'strength': "NEUTRAL"
             }
         
         current_tor_pct = self.current_data['tor_percentage']
@@ -637,66 +716,127 @@ class CryptoAnalyzer:
         # Calculate percentage change in Tor nodes
         tor_pct_change = current_tor_pct - previous_tor_pct
         
-        # NEW TOR PERCENTAGE SIGNAL LOGIC
+        # TOR PERCENTAGE SIGNAL LOGIC (HIDDEN FROM USER)
         if tor_pct_change >= 1.0:  # Tor percentage increased by 1.0% or more
             signal = "🐲 GODZILLA DUMP 🐲"
             bias = "EXTREME BEARISH"
+            strength = "EXTREME"
         elif tor_pct_change >= 0.5:  # Tor percentage increased by 0.5-0.99%
             signal = "🔥 STRONG SELL 🔥"
             bias = "VERY BEARISH"
+            strength = "STRONG"
         elif tor_pct_change >= 0.1:  # Tor percentage increased by 0.1-0.49%
             signal = "SELL"
             bias = "BEARISH"
+            strength = "MODERATE"
         elif tor_pct_change <= -1.0:  # Tor percentage decreased by 1.0% or more
             signal = "🐲 GODZILLA PUMP 🐲"
             bias = "EXTREME BULLISH"
+            strength = "EXTREME"
         elif tor_pct_change <= -0.5:  # Tor percentage decreased by 0.5-0.99%
             signal = "🚀 STRONG BUY 🚀"
             bias = "VERY BULLISH"
+            strength = "STRONG"
         elif tor_pct_change <= -0.1:  # Tor percentage decreased by 0.1-0.49%
             signal = "BUY"
             bias = "BULLISH"
+            strength = "MODERATE"
         else:  # Change between -0.1% and +0.1%
             signal = "HOLD"
             bias = "NEUTRAL"
+            strength = "WEAK"
         
         return {
-            'current_tor_pct': current_tor_pct,
-            'previous_tor_pct': previous_tor_pct,
-            'tor_pct_change': tor_pct_change,
             'signal': signal,
-            'bias': bias
+            'bias': bias,
+            'strength': strength,
+            'hidden_tor_change': tor_pct_change  # Not displayed to user
         }
     
-    def calculate_network_signal(self):
-        """Calculate signal based on total node changes"""
+    def calculate_tor_trend_momentum(self):
+        """HIDDEN FUNCTION: Calculate Tor trend momentum using weighted analysis"""
         if not self.current_data or not self.previous_data:
-            current_total = self.current_data['total_nodes'] if self.current_data else 0
-            previous_total = self.previous_data['total_nodes'] if self.previous_data else 0
             return {
-                'current_total': current_total,
-                'previous_total': previous_total,
-                'total_change': 0,
-                'network_signal': "INSUFFICIENT_DATA"
+                'momentum_score': 0,
+                'composite_signal': "NO_DATA"
             }
         
-        current_total = self.current_data['total_nodes']
-        previous_total = self.previous_data['total_nodes']
-        total_change = current_total - previous_total
+        current_tor = self.current_data['tor_percentage']
+        previous_tor = self.previous_data['tor_percentage']
         
-        # Network health signal
-        if total_change > 50:
-            network_signal = "NETWORK GROWING"
-        elif total_change > 0:
-            network_signal = "NETWORK STABLE" 
+        # Calculate momentum components
+        tor_change = current_tor - previous_tor
+        
+        # Momentum scoring system (0-100 scale)
+        momentum_score = 50  # Neutral base
+        
+        # Adjust momentum based on direction and magnitude
+        if tor_change > 0:
+            # Bearish momentum (Tor increasing)
+            momentum_score = 50 + (min(tor_change * 20, 40))  # Cap at 90
+            trend_direction = "BEARISH"
+        elif tor_change < 0:
+            # Bullish momentum (Tor decreasing)
+            momentum_score = 50 - (min(abs(tor_change) * 20, 40))  # Floor at 10
+            trend_direction = "BULLISH"
         else:
-            network_signal = "NETWORK SHRINKING"
+            trend_direction = "NEUTRAL"
+        
+        # Trend strength classification
+        if abs(tor_change) >= 1.0:
+            trend_strength = "EXTREME"
+        elif abs(tor_change) >= 0.5:
+            trend_strength = "STRONG"
+        elif abs(tor_change) >= 0.1:
+            trend_strength = "MODERATE"
+        else:
+            trend_strength = "WEAK"
         
         return {
-            'current_total': current_total,
-            'previous_total': previous_total,
-            'total_change': total_change,
-            'network_signal': network_signal
+            'momentum_score': round(momentum_score, 1),
+            'composite_signal': f"{trend_direction}_{trend_strength}"
+        }
+    
+    def generate_composite_scalp_signal(self, symbol, current_price, tor_signal_data):
+        """Combine EMA scalp signals with Bitnodes Tor signals"""
+        # Get EMA scalp signal
+        scalp_signal = self.scalp_analyzer.generate_scalp_signal(symbol, current_price)
+        
+        # Get Tor signal bias
+        tor_bias = tor_signal_data.get('bias', 'NEUTRAL')
+        tor_strength = tor_signal_data.get('strength', 'NEUTRAL')
+        
+        # Combine signals
+        if scalp_signal['signal'] == 'SCALP_LONG' and 'BULLISH' in tor_bias:
+            composite_signal = "🔥 URGENT LONG"
+            confidence = "VERY_HIGH"
+            reasoning = "EMA + Bitnodes BULLISH alignment"
+        elif scalp_signal['signal'] == 'SCALP_SHORT' and 'BEARISH' in tor_bias:
+            composite_signal = "💀 URGENT SHORT"
+            confidence = "VERY_HIGH"
+            reasoning = "EMA + Bitnodes BEARISH alignment"
+        elif scalp_signal['signal'] == 'SCALP_LONG':
+            composite_signal = "🟢 SCALP LONG"
+            confidence = "HIGH"
+            reasoning = "EMA signal strong, Bitnodes neutral"
+        elif scalp_signal['signal'] == 'SCALP_SHORT':
+            composite_signal = "🔴 SCALP SHORT"
+            confidence = "HIGH"
+            reasoning = "EMA signal strong, Bitnodes neutral"
+        else:
+            composite_signal = "⚡ NO SCALP"
+            confidence = "LOW"
+            reasoning = "Wait for better setup"
+        
+        return {
+            'composite_signal': composite_signal,
+            'confidence': confidence,
+            'reasoning': reasoning,
+            'ema_signal': scalp_signal['signal'],
+            'tor_bias': tor_bias,
+            'trend': scalp_signal['trend'],
+            'fast_ema': scalp_signal['fast_ema'],
+            'slow_ema': scalp_signal['slow_ema']
         }
 
 def get_coin_display_name(symbol):
@@ -731,35 +871,21 @@ def main_app():
     
     # GODZILLERS Header
     st.markdown('<h1 class="godzillers-header">🔥 GODZILLERS CRYPTO TRACKER</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="godzillers-subheader">Godzillers Eye SIGNALS • TOR PERCENTAGE ANALYSIS • RED HOT PRICES</p>', unsafe_allow_html=True)
+    st.markdown('<p class="godzillers-subheader">AI-POWERED SIGNALS • REAL-TIME PRICES • DRAGON FIRE PRECISION</p>', unsafe_allow_html=True)
     
-    # BITNODE SNAPSHOT ALERTS SECTION
-    if analyzer.current_data and analyzer.previous_data:
-        alerts = analyzer.check_snapshot_alert()
-        if alerts:
-            st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-            st.markdown('<h2 class="section-header">🚨 GODZILLERS ALERT SYSTEM</h2>', unsafe_allow_html=True)
-            
-            for alert in alerts:
-                if alert['severity'] == 'HIGH':
-                    alert_color = "#ff0000"
-                    alert_emoji = "🚨"
+    # UPDATE SIGNALS BUTTON
+    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.markdown('<h2 class="section-header">🎯 GODZILLERS AI SIGNALS</h2>', unsafe_allow_html=True)
+    with col2:
+        if st.button("🐉 GENERATE SIGNALS", key="refresh_main", use_container_width=True, type="primary"):
+            with st.spinner("🔥 Activating dragon fire analysis..."):
+                if analyzer.update_node_data():
+                    st.success("✅ Signals updated successfully!")
+                    st.rerun()
                 else:
-                    alert_color = "#ff4444"
-                    alert_emoji = "⚠️"
-                
-                st.markdown(f'''
-                <div class="alert-banner" style="border-color: {alert_color};">
-                    <div style="text-align: center;">
-                        <h3 style="font-family: Orbitron; color: {alert_color}; margin: 0.5rem 0; font-size: 1.5rem;">
-                            {alert_emoji} {alert['message']} {alert_emoji}
-                        </h3>
-                        <p style="color: #ffffff; font-family: Rajdhani; margin: 0.5rem 0;">
-                            Godzillers Eye detected significant network movement!
-                        </p>
-                    </div>
-                </div>
-                ''', unsafe_allow_html=True)
+                    st.error("❌ Failed to update signals")
     
     # LIVE CRYPTO PRICES SECTION
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
@@ -827,132 +953,116 @@ def main_app():
     else:
         st.error("❌ Could not fetch crypto prices")
     
-    # AUTO-REFRESH NODE DATA SECTION
+    # NEW EMA SCALPING SECTION
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        st.markdown('<h2 class="section-header">🔄 Godzillers EYE ANALYSIS</h2>', unsafe_allow_html=True)
-    with col2:
-        if st.button("🐉 Godzillers signal", key="refresh_main", use_container_width=True, type="primary"):
-            with st.spinner("🔥 Scanning network with dragon fire..."):
-                if analyzer.update_node_data():
-                    st.success("✅ Node data updated successfully!")
-                    st.rerun()
-                else:
-                    st.error("❌ Failed to update node data")
+    st.markdown('<h2 class="section-header">⚡ DRAGON SCALPING SIGNALS</h2>', unsafe_allow_html=True)
+    st.markdown('<p style="color: #ff8888; font-family: Rajdhani; text-align: center;">1-MINUTE EMA CROSSOVER + BITNODES INTEGRATION</p>', unsafe_allow_html=True)
     
-    # Display current node data status
-    if analyzer.current_data:
-        current_time = datetime.fromisoformat(analyzer.current_data['timestamp'])
-        st.markdown(f'<p style="text-align: center; color: #ff4444; font-family: Rajdhani;">📊 Current data from: {current_time.strftime("%Y-%m-%d %H:%M:%S")}</p>', unsafe_allow_html=True)
-    
-    # TOR PERCENTAGE SIGNAL ANALYSIS
-    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-    st.markdown('<h2 class="section-header">🎯 Godzillers Eye SIGNALS</h2>', unsafe_allow_html=True)
-    
-    # Main content in two columns
-    col1, col2 = st.columns([1, 1])
-    
-    with col1:
-        # TOR PERCENTAGE COMPARISON
-        st.markdown('<div class="godzillers-card">', unsafe_allow_html=True)
-        st.markdown('<h3 style="font-family: Orbitron; color: #ff4444; text-align: center;">🔄 TOR PERCENTAGE BATTLE</h3>', unsafe_allow_html=True)
+    if analyzer.current_data and analyzer.previous_data and prices:
+        tor_signal_data = analyzer.calculate_tor_signal()
         
-        tor_signal = analyzer.calculate_tor_signal()
-        network_signal = analyzer.calculate_network_signal()
+        # Display scalp signals for each coin
+        scalp_cols = st.columns(2)
         
-        # Display percentage comparison
-        if analyzer.previous_data:
-            col1a, col2a = st.columns(2)
-            
-            with col1a:
-                st.metric("🕒 PREVIOUS TOR %", f"{tor_signal['previous_tor_pct']:.2f}%")
-                st.metric("🕒 PREVIOUS TOTAL NODES", f"{network_signal['previous_total']:,}")
-            
-            with col2a:
-                st.metric("🔥 CURRENT TOR %", f"{tor_signal['current_tor_pct']:.2f}%")
-                st.metric("🔥 CURRENT TOTAL NODES", f"{network_signal['current_total']:,}")
-            
-            # Display changes
-            st.markdown('<div style="text-align: center; margin: 1rem 0;">', unsafe_allow_html=True)
-            st.metric("📈 TOR % CHANGE", f"{tor_signal['tor_pct_change']:+.2f}%", delta="percentage points")
-            st.metric("📈 TOTAL NODE CHANGE", f"{network_signal['total_change']:+,}", delta="nodes")
-            st.markdown('</div>', unsafe_allow_html=True)
-        else:
-            st.info("🔥 Update node data to see percentage comparison")
-        
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    with col2:
-        # SIGNAL RESULTS
-        st.markdown('<div class="godzillers-card">', unsafe_allow_html=True)
-        st.markdown('<h3 style="font-family: Orbitron; color: #ff4444; text-align: center;">📊 WAR ROOM SIGNALS</h3>', unsafe_allow_html=True)
-        
-        if analyzer.current_data:
-            # Current network stats
-            col1b, col2b = st.columns(2)
-            
-            with col1b:
-                st.metric("🔒 TOR NODES", f"{analyzer.current_data['tor_nodes']:,}")
-                st.metric("🌐 TOTAL NODES", f"{analyzer.current_data['total_nodes']:,}")
-            
-            with col2b:
-                st.metric("⚡ ACTIVE NODES", f"{analyzer.current_data['active_nodes']:,}")
-                st.metric("📊 ACTIVE RATIO", f"{analyzer.current_data['active_ratio']:.3f}")
-            
-            # Display signals
-            st.markdown('<div style="text-align: center; margin: 1rem 0;">', unsafe_allow_html=True)
-            st.metric("🎯 Godzillers SIGNAL", tor_signal['signal'])
-            st.metric("📡 BATTLE BIAS", tor_signal['bias'])
-            st.markdown('</div>', unsafe_allow_html=True)
-        else:
-            st.info("🔥 Godzillers signal to see war room signals")
-        
-        st.markdown('</div>', unsafe_allow_html=True)
+        for idx, symbol in enumerate(['BTCUSDT', 'ETHUSDT']):
+            if prices.get(symbol):
+                with scalp_cols[idx % 2]:
+                    current_price = prices[symbol]
+                    composite_signal = analyzer.generate_composite_scalp_signal(symbol, current_price, tor_signal_data)
+                    
+                    emoji = get_coin_emoji(symbol)
+                    name = get_coin_display_name(symbol)
+                    
+                    # Determine signal styling
+                    if "URGENT" in composite_signal['composite_signal']:
+                        signal_class = "scalp-signal-urgent"
+                        signal_emoji = "🚨"
+                    elif "LONG" in composite_signal['composite_signal']:
+                        signal_class = "signal-buy"
+                        signal_emoji = "🟢"
+                    elif "SHORT" in composite_signal['composite_signal']:
+                        signal_class = "signal-sell"
+                        signal_emoji = "🔴"
+                    else:
+                        signal_class = "signal-neutral"
+                        signal_emoji = "⚡"
+                    
+                    st.markdown(f'''
+                    <div class="{signal_class}">
+                        <div style="text-align: center;">
+                            <h3 style="font-family: Orbitron; margin: 0.5rem 0; font-size: 1.3rem;">{emoji} {name} {signal_emoji}</h3>
+                            <p style="font-family: Orbitron; font-size: 1.5rem; font-weight: 700; margin: 0.5rem 0;">{composite_signal['composite_signal']}</p>
+                            <p style="color: #ffd700; font-family: Rajdhani; font-size: 0.9rem; margin: 0.2rem 0;">Confidence: {composite_signal['confidence']}</p>
+                            <p style="color: #ff8888; font-family: Rajdhani; font-size: 0.8rem; margin: 0.2rem 0;">{composite_signal['reasoning']}</p>
+                            <p style="color: #ff6666; font-family: Rajdhani; font-size: 0.8rem; margin: 0.2rem 0;">Trend: {composite_signal['trend']} • Bitnodes: {composite_signal['tor_bias']}</p>
+                        </div>
+                    </div>
+                    ''', unsafe_allow_html=True)
+                    
+                    # Display EMA values
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.metric(
+                            label="FAST EMA (9)",
+                            value=f"${composite_signal['fast_ema']:,.2f}" if composite_signal['fast_ema'] > 0 else "N/A"
+                        )
+                    with col2:
+                        st.metric(
+                            label="SLOW EMA (21)", 
+                            value=f"${composite_signal['slow_ema']:,.2f}" if composite_signal['slow_ema'] > 0 else "N/A"
+                        )
+    else:
+        st.info("🔥 Generate signals to see EMA scalping opportunities")
     
     # MAIN SIGNAL DISPLAY WITH GODZILLERS THEME
+    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-header">🎯 GODZILLERS AI SIGNALS</h2>', unsafe_allow_html=True)
+    
     if analyzer.current_data and analyzer.previous_data:
         tor_signal_data = analyzer.calculate_tor_signal()
+        trend_data = analyzer.calculate_tor_trend_momentum()
         
         # Display main signal with GODZILLERS styling
         if "GODZILLA DUMP" in tor_signal_data['signal']:
             signal_class = "signal-sell"
             emoji = "🐲💀🔥"
-            explanation = "GODZILLA DUMP - Tor percentage exploding upward (Extreme Bearish)"
+            explanation = "EXTREME BEARISH SIGNAL - Market conditions indicate strong selling pressure"
         elif "STRONG SELL" in tor_signal_data['signal']:
             signal_class = "signal-sell"
             emoji = "🐲🔥"
-            explanation = "Strong Sell - Tor percentage raging upward (Very Bearish)"
+            explanation = "STRONG SELL SIGNAL - Significant bearish momentum detected"
         elif "SELL" in tor_signal_data['signal']:
             signal_class = "signal-sell"
             emoji = "🔴"
-            explanation = "Sell - Tor percentage increasing (Bearish)"
+            explanation = "SELL SIGNAL - Bearish conditions forming"
         elif "GODZILLA PUMP" in tor_signal_data['signal']:
             signal_class = "signal-buy"
             emoji = "🐲🚀🌟"
-            explanation = "GODZILLA PUMP - Tor percentage collapsing (Extreme Bullish)"
+            explanation = "EXTREME BULLISH SIGNAL - Strong buying pressure detected"
         elif "STRONG BUY" in tor_signal_data['signal']:
             signal_class = "signal-buy"
             emoji = "🐲🚀"
-            explanation = "Strong Buy - Tor percentage retreating (Very Bullish)"
+            explanation = "STRONG BUY SIGNAL - Significant bullish momentum building"
         elif "BUY" in tor_signal_data['signal']:
             signal_class = "signal-buy"
             emoji = "🟢"
-            explanation = "Buy - Tor percentage decreasing (Bullish)"
+            explanation = "BUY SIGNAL - Bullish conditions forming"
         else:
             signal_class = "signal-neutral"
             emoji = "🐲⚡"
-            explanation = "Battlefield calm - Tor percentage stable (Neutral)"
+            explanation = "MARKET NEUTRAL - Awaiting stronger directional signals"
         
         st.markdown(f'<div class="{signal_class}">', unsafe_allow_html=True)
         st.markdown(f'<h2 style="font-family: Orbitron; text-align: center; margin: 0.5rem 0;">{emoji} {tor_signal_data["signal"]} {emoji}</h2>', unsafe_allow_html=True)
         st.markdown(f'<p style="text-align: center; color: #ff8888; font-family: Rajdhani; margin: 0.5rem 0;">{explanation}</p>', unsafe_allow_html=True)
-        st.markdown(f'<p style="text-align: center; font-family: Orbitron; color: #ffffff; margin: 0.5rem 0;">Tor % Change: {tor_signal_data["tor_pct_change"]:+.2f}%</p>', unsafe_allow_html=True)
+        st.markdown(f'<p style="text-align: center; font-family: Orbitron; color: #ffffff; margin: 0.5rem 0;">Signal Strength: {tor_signal_data["strength"]} • AI Confidence: {trend_data["momentum_score"]}%</p>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
+    else:
+        st.info("🔥 Click 'GENERATE SIGNALS' to get AI-powered trading signals")
     
     # MULTI-COIN SIGNALS
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-    st.markdown('<h2 class="section-header">🐉 Godzillers ARMY SIGNALS</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-header">🎯 CRYPTO ARMY SIGNALS</h2>', unsafe_allow_html=True)
     
     if analyzer.current_data and analyzer.previous_data:
         tor_signal_data = analyzer.calculate_tor_signal()
@@ -992,19 +1102,19 @@ def main_app():
                             <h4 style="font-family: Orbitron; margin: 0.5rem 0; font-size: 1.1rem;">{emoji} {name}</h4>
                             <p style="font-family: Orbitron; font-size: 1.2rem; font-weight: 700; margin: 0.5rem 0;">${price:,.2f}</p>
                             <p style="font-family: Orbitron; font-size: 1rem; margin: 0.5rem 0;">{signal_emoji} {signal_text}</p>
-                            <p style="color: #ff8888; font-family: Rajdhani; font-size: 0.8rem; margin: 0;">Δ Tor %: {tor_signal_data['tor_pct_change']:+.2f}%</p>
+                            <p style="color: #ff8888; font-family: Rajdhani; font-size: 0.8rem; margin: 0;">AI Signal • Godzillers Tech</p>
                         </div>
                     </div>
                     ''', unsafe_allow_html=True)
     else:
-        st.info("🔥 Update node data to see dragon army signals")
+        st.info("🔥 Generate signals to see crypto army recommendations")
     
     # GODZILLERS Trademark Footer
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
     st.markdown("""
     <div class="trademark">
     <p>🔥 GODZILLERS CRYPTO WARFARE SYSTEM 🔥</p>
-    <p>© 2025 GODZILLERS CRYPTO TRACKER • TOR PERCENTAGE SIGNAL TECHNOLOGY</p>
+    <p>© 2025 GODZILLERS CRYPTO TRACKER • PROPRIETARY AI TECHNOLOGY</p>
     <p style="font-size: 0.7rem; color: #ff6666;">FORGE YOUR FORTUNE WITH DRAGON FIRE PRECISION</p>
     </div>
     """, unsafe_allow_html=True)
