@@ -124,6 +124,38 @@ st.markdown("""
         100% { box-shadow: 0 0 25px rgba(255, 215, 0, 0.6); }
     }
     
+    .scalp-signal-confirmed {
+        background: linear-gradient(135deg, rgba(0, 255, 0, 0.15) 0%, rgba(0, 100, 0, 0.3) 100%);
+        border: 2px solid #00ff00;
+        border-radius: 12px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        box-shadow: 0 0 30px rgba(0, 255, 0, 0.5);
+        animation: pulse-confirmed 2s infinite;
+    }
+    
+    @keyframes pulse-confirmed {
+        0% { box-shadow: 0 0 20px rgba(0, 255, 0, 0.5); }
+        50% { box-shadow: 0 0 35px rgba(0, 255, 0, 0.8); }
+        100% { box-shadow: 0 0 20px rgba(0, 255, 0, 0.5); }
+    }
+    
+    .scalp-signal-warning {
+        background: linear-gradient(135deg, rgba(255, 0, 0, 0.15) 0%, rgba(100, 0, 0, 0.3) 100%);
+        border: 2px solid #ff0000;
+        border-radius: 12px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        box-shadow: 0 0 30px rgba(255, 0, 0, 0.5);
+        animation: pulse-warning 2s infinite;
+    }
+    
+    @keyframes pulse-warning {
+        0% { box-shadow: 0 0 20px rgba(255, 0, 0, 0.5); }
+        50% { box-shadow: 0 0 35px rgba(255, 0, 0, 0.8); }
+        100% { box-shadow: 0 0 20px rgba(255, 0, 0, 0.5); }
+    }
+    
     .price-glow {
         background: linear-gradient(135deg, rgba(255, 0, 0, 0.15) 0%, rgba(139, 0, 0, 0.25) 100%);
         border: 1px solid rgba(255, 0, 0, 0.6);
@@ -378,6 +410,32 @@ st.markdown("""
         font-size: 2rem;
         text-shadow: 0 0 10px #ff0000;
     }
+    
+    .confirmation-badge {
+        display: inline-block;
+        background: linear-gradient(90deg, #00ff00, #00cc00);
+        color: #000000;
+        font-family: 'Orbitron', monospace;
+        font-weight: 700;
+        padding: 0.3rem 0.8rem;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        margin: 0.2rem;
+        box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+    }
+    
+    .warning-badge {
+        display: inline-block;
+        background: linear-gradient(90deg, #ff0000, #cc0000);
+        color: #ffffff;
+        font-family: 'Orbitron', monospace;
+        font-weight: 700;
+        padding: 0.3rem 0.8rem;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        margin: 0.2rem;
+        box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -549,7 +607,22 @@ class EMAScalpingAnalyzer:
                     'fast_ema': 0,
                     'slow_ema': 0,
                     'signal_ema': 0,
-                    'trend': 'SIDEWAYS'
+                    'trend': 'SIDEWAYS',
+                    'crossover_strength': 0
+                }
+            
+            # Get historical data
+            historical_data = self.get_historical_data(symbol, 100)
+            
+            if not historical_data or len(historical_data) < self.ema_signal:
+                return {
+                    'signal': 'NO_DATA',
+                    'strength': 'NEUTRAL',
+                    'fast_ema': 0,
+                    'slow_ema': 0,
+                    'signal_ema': 0,
+                    'trend': 'SIDEWAYS',
+                    'crossover_strength': 0
                 }
             
             # Calculate EMAs
@@ -564,24 +637,42 @@ class EMAScalpingAnalyzer:
                     'fast_ema': 0,
                     'slow_ema': 0,
                     'signal_ema': 0,
-                    'trend': 'SIDEWAYS'
+                    'trend': 'SIDEWAYS',
+                    'crossover_strength': 0
                 }
             
+            # Calculate crossover strength
+            crossover_strength = abs(fast_ema - slow_ema) / slow_ema * 100
+            
             # Determine trend based on signal EMA
-            if current_price > signal_ema:
+            if current_price > signal_ema * 1.002:  # 0.2% above signal EMA
+                trend = "STRONG_BULLISH"
+            elif current_price > signal_ema:
                 trend = "BULLISH"
+            elif current_price < signal_ema * 0.998:  # 0.2% below signal EMA
+                trend = "STRONG_BEARISH"
             elif current_price < signal_ema:
                 trend = "BEARISH"
             else:
                 trend = "SIDEWAYS"
             
-            # Generate scalp signal
-            if fast_ema > slow_ema and trend == "BULLISH":
+            # Generate scalp signal with strength
+            if fast_ema > slow_ema and trend in ["BULLISH", "STRONG_BULLISH"]:
                 signal = "SCALP_LONG"
-                strength = "STRONG" if (fast_ema - slow_ema) / slow_ema > 0.001 else "MODERATE"
-            elif fast_ema < slow_ema and trend == "BEARISH":
+                if crossover_strength > 0.15 and trend == "STRONG_BULLISH":
+                    strength = "VERY_STRONG"
+                elif crossover_strength > 0.08:
+                    strength = "STRONG"
+                else:
+                    strength = "MODERATE"
+            elif fast_ema < slow_ema and trend in ["BEARISH", "STRONG_BEARISH"]:
                 signal = "SCALP_SHORT"
-                strength = "STRONG" if (slow_ema - fast_ema) / fast_ema > 0.001 else "MODERATE"
+                if crossover_strength > 0.15 and trend == "STRONG_BEARISH":
+                    strength = "VERY_STRONG"
+                elif crossover_strength > 0.08:
+                    strength = "STRONG"
+                else:
+                    strength = "MODERATE"
             else:
                 signal = "NO_SCALP"
                 strength = "NEUTRAL"
@@ -593,7 +684,8 @@ class EMAScalpingAnalyzer:
                 'slow_ema': slow_ema,
                 'signal_ema': signal_ema,
                 'trend': trend,
-                'price_vs_fast': current_price - fast_ema
+                'price_vs_fast': current_price - fast_ema,
+                'crossover_strength': crossover_strength
             }
             
         except Exception as e:
@@ -603,7 +695,8 @@ class EMAScalpingAnalyzer:
                 'fast_ema': 0,
                 'slow_ema': 0,
                 'signal_ema': 0,
-                'trend': 'SIDEWAYS'
+                'trend': 'SIDEWAYS',
+                'crossover_strength': 0
             }
 
 class CryptoAnalyzer:
@@ -706,8 +799,10 @@ class CryptoAnalyzer:
         if not self.current_data or not self.previous_data:
             return {
                 'signal': "🔄 NEED DATA",
-                'bias': "UPDATE REQUIRED",
-                'strength': "NEUTRAL"
+                'bias': "UPDATE_REQUIRED",
+                'strength': "NEUTRAL",
+                'tor_change': 0,
+                'momentum': 0
             }
         
         current_tor_pct = self.current_data['tor_percentage']
@@ -716,14 +811,17 @@ class CryptoAnalyzer:
         # Calculate percentage change in Tor nodes
         tor_pct_change = current_tor_pct - previous_tor_pct
         
+        # Calculate momentum (rate of change)
+        tor_momentum = tor_pct_change * 100  # Amplify for scoring
+        
         # TOR PERCENTAGE SIGNAL LOGIC (HIDDEN FROM USER)
         if tor_pct_change >= 1.0:  # Tor percentage increased by 1.0% or more
             signal = "🐲 GODZILLA DUMP 🐲"
-            bias = "EXTREME BEARISH"
+            bias = "EXTREME_BEARISH"
             strength = "EXTREME"
         elif tor_pct_change >= 0.5:  # Tor percentage increased by 0.5-0.99%
             signal = "🔥 STRONG SELL 🔥"
-            bias = "VERY BEARISH"
+            bias = "VERY_BEARISH"
             strength = "STRONG"
         elif tor_pct_change >= 0.1:  # Tor percentage increased by 0.1-0.49%
             signal = "SELL"
@@ -731,11 +829,11 @@ class CryptoAnalyzer:
             strength = "MODERATE"
         elif tor_pct_change <= -1.0:  # Tor percentage decreased by 1.0% or more
             signal = "🐲 GODZILLA PUMP 🐲"
-            bias = "EXTREME BULLISH"
+            bias = "EXTREME_BULLISH"
             strength = "EXTREME"
         elif tor_pct_change <= -0.5:  # Tor percentage decreased by 0.5-0.99%
             signal = "🚀 STRONG BUY 🚀"
-            bias = "VERY BULLISH"
+            bias = "VERY_BULLISH"
             strength = "STRONG"
         elif tor_pct_change <= -0.1:  # Tor percentage decreased by 0.1-0.49%
             signal = "BUY"
@@ -750,94 +848,144 @@ class CryptoAnalyzer:
             'signal': signal,
             'bias': bias,
             'strength': strength,
-            'hidden_tor_change': tor_pct_change  # Not displayed to user
+            'tor_change': tor_pct_change,
+            'momentum': tor_momentum
         }
     
-    def calculate_tor_trend_momentum(self):
-        """HIDDEN FUNCTION: Calculate Tor trend momentum using weighted analysis"""
-        if not self.current_data or not self.previous_data:
-            return {
-                'momentum_score': 0,
-                'composite_signal': "NO_DATA"
-            }
+    def calculate_confirmation_score(self, ema_signal, tor_signal):
+        """Calculate confirmation score between EMA and Bitnodes signals"""
+        score = 0
+        confirmations = []
         
-        current_tor = self.current_data['tor_percentage']
-        previous_tor = self.previous_data['tor_percentage']
+        # EMA Signal Analysis
+        if ema_signal['signal'] == 'SCALP_LONG':
+            score += 25
+            confirmations.append("EMA Bullish")
+        elif ema_signal['signal'] == 'SCALP_SHORT':
+            score += 25
+            confirmations.append("EMA Bearish")
         
-        # Calculate momentum components
-        tor_change = current_tor - previous_tor
+        # EMA Strength Bonus
+        if ema_signal['strength'] == 'VERY_STRONG':
+            score += 20
+            confirmations.append("Very Strong EMA")
+        elif ema_signal['strength'] == 'STRONG':
+            score += 15
+            confirmations.append("Strong EMA")
+        elif ema_signal['strength'] == 'MODERATE':
+            score += 10
+            confirmations.append("Moderate EMA")
         
-        # Momentum scoring system (0-100 scale)
-        momentum_score = 50  # Neutral base
-        
-        # Adjust momentum based on direction and magnitude
-        if tor_change > 0:
-            # Bearish momentum (Tor increasing)
-            momentum_score = 50 + (min(tor_change * 20, 40))  # Cap at 90
-            trend_direction = "BEARISH"
-        elif tor_change < 0:
-            # Bullish momentum (Tor decreasing)
-            momentum_score = 50 - (min(abs(tor_change) * 20, 40))  # Floor at 10
-            trend_direction = "BULLISH"
+        # Bitnodes Signal Analysis
+        if 'BULLISH' in tor_signal['bias'] and ema_signal['signal'] == 'SCALP_LONG':
+            score += 30
+            confirmations.append("Bitnodes Confirmed")
+        elif 'BEARISH' in tor_signal['bias'] and ema_signal['signal'] == 'SCALP_SHORT':
+            score += 30
+            confirmations.append("Bitnodes Confirmed")
+        elif tor_signal['bias'] == 'NEUTRAL':
+            score += 10
+            confirmations.append("Bitnodes Neutral")
         else:
-            trend_direction = "NEUTRAL"
+            score -= 20
+            confirmations.append("Bitnodes Conflict!")
         
-        # Trend strength classification
-        if abs(tor_change) >= 1.0:
-            trend_strength = "EXTREME"
-        elif abs(tor_change) >= 0.5:
-            trend_strength = "STRONG"
-        elif abs(tor_change) >= 0.1:
-            trend_strength = "MODERATE"
-        else:
-            trend_strength = "WEAK"
+        # Trend Alignment Bonus
+        if (ema_signal['trend'] in ['STRONG_BULLISH', 'BULLISH'] and 
+            'BULLISH' in tor_signal['bias']):
+            score += 15
+            confirmations.append("Trend Aligned")
+        elif (ema_signal['trend'] in ['STRONG_BEARISH', 'BEARISH'] and 
+              'BEARISH' in tor_signal['bias']):
+            score += 15
+            confirmations.append("Trend Aligned")
         
-        return {
-            'momentum_score': round(momentum_score, 1),
-            'composite_signal': f"{trend_direction}_{trend_strength}"
-        }
+        return min(100, max(0, score)), confirmations
     
-    def generate_composite_scalp_signal(self, symbol, current_price, tor_signal_data):
-        """Combine EMA scalp signals with Bitnodes Tor signals"""
-        # Get EMA scalp signal
-        scalp_signal = self.scalp_analyzer.generate_scalp_signal(symbol, current_price)
+    def generate_composite_scalp_signal(self, symbol, current_price):
+        """Generate combined EMA + Bitnodes scalp signal with confirmation scoring"""
+        # Get individual signals
+        ema_signal = self.scalp_analyzer.generate_scalp_signal(symbol, current_price)
+        tor_signal = self.calculate_tor_signal()
         
-        # Get Tor signal bias
-        tor_bias = tor_signal_data.get('bias', 'NEUTRAL')
-        tor_strength = tor_signal_data.get('strength', 'NEUTRAL')
+        # Calculate confirmation score
+        confirmation_score, confirmations = self.calculate_confirmation_score(ema_signal, tor_signal)
         
-        # Combine signals
-        if scalp_signal['signal'] == 'SCALP_LONG' and 'BULLISH' in tor_bias:
-            composite_signal = "🔥 URGENT LONG"
-            confidence = "VERY_HIGH"
-            reasoning = "EMA + Bitnodes BULLISH alignment"
-        elif scalp_signal['signal'] == 'SCALP_SHORT' and 'BEARISH' in tor_bias:
-            composite_signal = "💀 URGENT SHORT"
-            confidence = "VERY_HIGH"
-            reasoning = "EMA + Bitnodes BEARISH alignment"
-        elif scalp_signal['signal'] == 'SCALP_LONG':
-            composite_signal = "🟢 SCALP LONG"
-            confidence = "HIGH"
-            reasoning = "EMA signal strong, Bitnodes neutral"
-        elif scalp_signal['signal'] == 'SCALP_SHORT':
-            composite_signal = "🔴 SCALP SHORT"
-            confidence = "HIGH"
-            reasoning = "EMA signal strong, Bitnodes neutral"
+        # Determine composite signal based on score and alignment
+        if confirmation_score >= 80:
+            if ema_signal['signal'] == 'SCALP_LONG':
+                composite_signal = "🚨 CONFIRMED LONG"
+                signal_class = "scalp-signal-confirmed"
+                urgency = "EXTREME"
+            else:
+                composite_signal = "🚨 CONFIRMED SHORT"
+                signal_class = "scalp-signal-confirmed"
+                urgency = "EXTREME"
+        elif confirmation_score >= 60:
+            if ema_signal['signal'] == 'SCALP_LONG':
+                composite_signal = "🔥 STRONG LONG"
+                signal_class = "scalp-signal-urgent"
+                urgency = "HIGH"
+            else:
+                composite_signal = "🔥 STRONG SHORT"
+                signal_class = "scalp-signal-urgent"
+                urgency = "HIGH"
+        elif confirmation_score >= 40:
+            if ema_signal['signal'] == 'SCALP_LONG':
+                composite_signal = "🟢 SCALP LONG"
+                signal_class = "signal-buy"
+                urgency = "MEDIUM"
+            else:
+                composite_signal = "🔴 SCALP SHORT"
+                signal_class = "signal-sell"
+                urgency = "MEDIUM"
         else:
-            composite_signal = "⚡ NO SCALP"
-            confidence = "LOW"
-            reasoning = "Wait for better setup"
+            if ema_signal['signal'] != 'NO_SCALP' and confirmation_score < 30:
+                composite_signal = "⚠️ CONFLICT SIGNAL"
+                signal_class = "scalp-signal-warning"
+                urgency = "LOW"
+            else:
+                composite_signal = "⚡ NO SCALP"
+                signal_class = "signal-neutral"
+                urgency = "LOW"
         
         return {
             'composite_signal': composite_signal,
-            'confidence': confidence,
-            'reasoning': reasoning,
-            'ema_signal': scalp_signal['signal'],
-            'tor_bias': tor_bias,
-            'trend': scalp_signal['trend'],
-            'fast_ema': scalp_signal['fast_ema'],
-            'slow_ema': scalp_signal['slow_ema']
+            'signal_class': signal_class,
+            'urgency': urgency,
+            'confirmation_score': confirmation_score,
+            'confirmations': confirmations,
+            'ema_signal': ema_signal['signal'],
+            'ema_strength': ema_signal['strength'],
+            'tor_bias': tor_signal['bias'],
+            'tor_strength': tor_signal['strength'],
+            'trend': ema_signal['trend'],
+            'fast_ema': ema_signal['fast_ema'],
+            'slow_ema': ema_signal['slow_ema'],
+            'crossover_strength': ema_signal['crossover_strength'],
+            'reasoning': self.generate_reasoning(ema_signal, tor_signal, confirmations)
         }
+    
+    def generate_reasoning(self, ema_signal, tor_signal, confirmations):
+        """Generate detailed reasoning for the signal"""
+        reasoning = []
+        
+        # EMA Analysis
+        if ema_signal['signal'] == 'SCALP_LONG':
+            reasoning.append(f"EMA Bullish Crossover (Strength: {ema_signal['crossover_strength']:.3f}%)")
+        elif ema_signal['signal'] == 'SCALP_SHORT':
+            reasoning.append(f"EMA Bearish Crossover (Strength: {ema_signal['crossover_strength']:.3f}%)")
+        
+        # Trend Analysis
+        reasoning.append(f"Trend: {ema_signal['trend']}")
+        
+        # Bitnodes Analysis
+        reasoning.append(f"Bitnodes: {tor_signal['bias']} ({tor_signal['strength']})")
+        
+        # Add confirmations
+        reasoning.extend(confirmations)
+        
+        return " • ".join(reasoning)
 
 def get_coin_display_name(symbol):
     """Get display name for crypto symbols"""
@@ -953,14 +1101,12 @@ def main_app():
     else:
         st.error("❌ Could not fetch crypto prices")
     
-    # NEW EMA SCALPING SECTION
+    # ENHANCED EMA SCALPING SECTION WITH CONFIRMATION
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
     st.markdown('<h2 class="section-header">⚡ DRAGON SCALPING SIGNALS</h2>', unsafe_allow_html=True)
-    st.markdown('<p style="color: #ff8888; font-family: Rajdhani; text-align: center;">1-MINUTE EMA CROSSOVER + BITNODES INTEGRATION</p>', unsafe_allow_html=True)
+    st.markdown('<p style="color: #ff8888; font-family: Rajdhani; text-align: center;">EMA + BITNODES CONFIRMATION SYSTEM • 1-MINUTE TIMEFRAME</p>', unsafe_allow_html=True)
     
     if analyzer.current_data and analyzer.previous_data and prices:
-        tor_signal_data = analyzer.calculate_tor_signal()
-        
         # Display scalp signals for each coin
         scalp_cols = st.columns(2)
         
@@ -968,51 +1114,57 @@ def main_app():
             if prices.get(symbol):
                 with scalp_cols[idx % 2]:
                     current_price = prices[symbol]
-                    composite_signal = analyzer.generate_composite_scalp_signal(symbol, current_price, tor_signal_data)
+                    composite_signal = analyzer.generate_composite_scalp_signal(symbol, current_price)
                     
                     emoji = get_coin_emoji(symbol)
                     name = get_coin_display_name(symbol)
                     
-                    # Determine signal styling
-                    if "URGENT" in composite_signal['composite_signal']:
-                        signal_class = "scalp-signal-urgent"
-                        signal_emoji = "🚨"
-                    elif "LONG" in composite_signal['composite_signal']:
-                        signal_class = "signal-buy"
-                        signal_emoji = "🟢"
-                    elif "SHORT" in composite_signal['composite_signal']:
-                        signal_class = "signal-sell"
-                        signal_emoji = "🔴"
-                    else:
-                        signal_class = "signal-neutral"
-                        signal_emoji = "⚡"
-                    
+                    # Display main signal card
                     st.markdown(f'''
-                    <div class="{signal_class}">
+                    <div class="{composite_signal['signal_class']}">
                         <div style="text-align: center;">
-                            <h3 style="font-family: Orbitron; margin: 0.5rem 0; font-size: 1.3rem;">{emoji} {name} {signal_emoji}</h3>
+                            <h3 style="font-family: Orbitron; margin: 0.5rem 0; font-size: 1.3rem;">{emoji} {name}</h3>
                             <p style="font-family: Orbitron; font-size: 1.5rem; font-weight: 700; margin: 0.5rem 0;">{composite_signal['composite_signal']}</p>
-                            <p style="color: #ffd700; font-family: Rajdhani; font-size: 0.9rem; margin: 0.2rem 0;">Confidence: {composite_signal['confidence']}</p>
-                            <p style="color: #ff8888; font-family: Rajdhani; font-size: 0.8rem; margin: 0.2rem 0;">{composite_signal['reasoning']}</p>
-                            <p style="color: #ff6666; font-family: Rajdhani; font-size: 0.8rem; margin: 0.2rem 0;">Trend: {composite_signal['trend']} • Bitnodes: {composite_signal['tor_bias']}</p>
+                            <p style="color: #ffd700; font-family: Orbitron; font-size: 1.1rem; margin: 0.2rem 0;">CONFIRMATION: {composite_signal['confirmation_score']}%</p>
+                            <p style="color: #ff8888; font-family: Rajdhani; font-size: 0.9rem; margin: 0.2rem 0;">Urgency: {composite_signal['urgency']}</p>
+                            <p style="color: #ffffff; font-family: Rajdhani; font-size: 0.8rem; margin: 0.2rem 0;">{composite_signal['reasoning']}</p>
                         </div>
                     </div>
                     ''', unsafe_allow_html=True)
                     
-                    # Display EMA values
-                    col1, col2 = st.columns(2)
+                    # Display confirmation badges
+                    st.markdown('<div style="text-align: center; margin: 0.5rem 0;">', unsafe_allow_html=True)
+                    for confirmation in composite_signal['confirmations']:
+                        if "Confirmed" in confirmation or "Aligned" in confirmation:
+                            st.markdown(f'<span class="confirmation-badge">✓ {confirmation}</span>', unsafe_allow_html=True)
+                        elif "Conflict" in confirmation:
+                            st.markdown(f'<span class="warning-badge">⚠ {confirmation}</span>', unsafe_allow_html=True)
+                        else:
+                            st.markdown(f'<span style="display: inline-block; background: #444; color: #fff; padding: 0.2rem 0.5rem; border-radius: 10px; font-size: 0.7rem; margin: 0.1rem;">{confirmation}</span>', unsafe_allow_html=True)
+                    st.markdown('</div>', unsafe_allow_html=True)
+                    
+                    # Display EMA values and metrics
+                    col1, col2, col3 = st.columns(3)
                     with col1:
                         st.metric(
                             label="FAST EMA (9)",
-                            value=f"${composite_signal['fast_ema']:,.2f}" if composite_signal['fast_ema'] > 0 else "N/A"
+                            value=f"${composite_signal['fast_ema']:,.2f}" if composite_signal['fast_ema'] > 0 else "N/A",
+                            delta=f"{composite_signal['crossover_strength']:.3f}% strength"
                         )
                     with col2:
                         st.metric(
                             label="SLOW EMA (21)", 
-                            value=f"${composite_signal['slow_ema']:,.2f}" if composite_signal['slow_ema'] > 0 else "N/A"
+                            value=f"${composite_signal['slow_ema']:,.2f}" if composite_signal['slow_ema'] > 0 else "N/A",
+                            delta=composite_signal['ema_strength']
+                        )
+                    with col3:
+                        st.metric(
+                            label="BITNODES BIAS",
+                            value=composite_signal['tor_bias'].replace('_', ' '),
+                            delta=composite_signal['tor_strength']
                         )
     else:
-        st.info("🔥 Generate signals to see EMA scalping opportunities")
+        st.info("🔥 Generate signals to see EMA + Bitnodes confirmed scalping opportunities")
     
     # MAIN SIGNAL DISPLAY WITH GODZILLERS THEME
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
@@ -1020,7 +1172,6 @@ def main_app():
     
     if analyzer.current_data and analyzer.previous_data:
         tor_signal_data = analyzer.calculate_tor_signal()
-        trend_data = analyzer.calculate_tor_trend_momentum()
         
         # Display main signal with GODZILLERS styling
         if "GODZILLA DUMP" in tor_signal_data['signal']:
@@ -1055,59 +1206,10 @@ def main_app():
         st.markdown(f'<div class="{signal_class}">', unsafe_allow_html=True)
         st.markdown(f'<h2 style="font-family: Orbitron; text-align: center; margin: 0.5rem 0;">{emoji} {tor_signal_data["signal"]} {emoji}</h2>', unsafe_allow_html=True)
         st.markdown(f'<p style="text-align: center; color: #ff8888; font-family: Rajdhani; margin: 0.5rem 0;">{explanation}</p>', unsafe_allow_html=True)
-        st.markdown(f'<p style="text-align: center; font-family: Orbitron; color: #ffffff; margin: 0.5rem 0;">Signal Strength: {tor_signal_data["strength"]} • AI Confidence: {trend_data["momentum_score"]}%</p>', unsafe_allow_html=True)
+        st.markdown(f'<p style="text-align: center; font-family: Orbitron; color: #ffffff; margin: 0.5rem 0;">Signal Strength: {tor_signal_data["strength"]} • Tor Change: {tor_signal_data["tor_change"]:+.3f}%</p>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
     else:
         st.info("🔥 Click 'GENERATE SIGNALS' to get AI-powered trading signals")
-    
-    # MULTI-COIN SIGNALS
-    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-    st.markdown('<h2 class="section-header">🎯 CRYPTO ARMY SIGNALS</h2>', unsafe_allow_html=True)
-    
-    if analyzer.current_data and analyzer.previous_data:
-        tor_signal_data = analyzer.calculate_tor_signal()
-        
-        # Apply Tor percentage trend analysis to remaining coins
-        coins_list = [
-            'BTCUSDT', 'ETHUSDT'
-        ]
-        
-        # Create columns for coin signals (2 columns for cleaner layout)
-        signal_cols = st.columns(2)
-        
-        for idx, symbol in enumerate(coins_list):
-            if prices.get(symbol):
-                with signal_cols[idx % 2]:
-                    emoji = get_coin_emoji(symbol)
-                    name = get_coin_display_name(symbol)
-                    price = prices[symbol]
-                    
-                    # Apply the same Tor percentage signal to all coins
-                    if "SELL" in tor_signal_data['signal']:
-                        signal_class = "signal-sell"
-                        signal_text = tor_signal_data['signal']
-                        signal_emoji = "🔴"
-                    elif "BUY" in tor_signal_data['signal']:
-                        signal_class = "signal-buy"
-                        signal_text = tor_signal_data['signal']
-                        signal_emoji = "🟢"
-                    else:
-                        signal_class = "signal-neutral"
-                        signal_text = tor_signal_data['signal']
-                        signal_emoji = "🟡"
-                    
-                    st.markdown(f'''
-                    <div class="{signal_class}" style="padding: 1rem; margin: 0.5rem 0;">
-                        <div style="text-align: center;">
-                            <h4 style="font-family: Orbitron; margin: 0.5rem 0; font-size: 1.1rem;">{emoji} {name}</h4>
-                            <p style="font-family: Orbitron; font-size: 1.2rem; font-weight: 700; margin: 0.5rem 0;">${price:,.2f}</p>
-                            <p style="font-family: Orbitron; font-size: 1rem; margin: 0.5rem 0;">{signal_emoji} {signal_text}</p>
-                            <p style="color: #ff8888; font-family: Rajdhani; font-size: 0.8rem; margin: 0;">AI Signal • Godzillers Tech</p>
-                        </div>
-                    </div>
-                    ''', unsafe_allow_html=True)
-    else:
-        st.info("🔥 Generate signals to see crypto army recommendations")
     
     # GODZILLERS Trademark Footer
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
@@ -1134,4 +1236,4 @@ def main():
         main_app()
 
 if __name__ == "__main__":
-    main()
+    main()  
