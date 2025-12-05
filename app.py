@@ -8,6 +8,10 @@ import plotly.graph_objects as go
 import plotly.express as px
 import numpy as np
 import time
+import websocket
+import threading
+import queue
+from collections import deque
 
 # GODZILLERS Streamlit setup
 st.set_page_config(
@@ -17,7 +21,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# GODZILLERS CSS with red and black theme - UPDATED FOR BETTER LOGIN
+# GODZILLERS CSS with red and black theme - UPDATED
 st.markdown("""
 <style>
     /* Hide all Streamlit elements on login page */
@@ -108,52 +112,45 @@ st.markdown("""
         box-shadow: 0 0 20px rgba(255, 165, 0, 0.3);
     }
     
-    .scalp-signal-urgent {
-        background: linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 140, 0, 0.4) 100%);
-        border: 2px solid #ffd700;
-        border-radius: 12px;
-        padding: 1rem;
-        margin: 0.5rem 0;
-        box-shadow: 0 0 25px rgba(255, 215, 0, 0.6);
-        animation: pulse-urgent 1s infinite;
-    }
-    
-    @keyframes pulse-urgent {
-        0% { box-shadow: 0 0 25px rgba(255, 215, 0, 0.6); }
-        50% { box-shadow: 0 0 40px rgba(255, 215, 0, 0.9); }
-        100% { box-shadow: 0 0 25px rgba(255, 215, 0, 0.6); }
-    }
-    
-    .scalp-signal-confirmed {
-        background: linear-gradient(135deg, rgba(0, 255, 0, 0.15) 0%, rgba(0, 100, 0, 0.3) 100%);
+    .pmicro-buy-signal {
+        background: linear-gradient(135deg, rgba(0, 255, 0, 0.2) 0%, rgba(0, 150, 0, 0.4) 100%);
         border: 2px solid #00ff00;
         border-radius: 12px;
         padding: 1rem;
         margin: 0.5rem 0;
         box-shadow: 0 0 30px rgba(0, 255, 0, 0.5);
-        animation: pulse-confirmed 2s infinite;
+        animation: pulse-buy 2s infinite;
     }
     
-    @keyframes pulse-confirmed {
+    @keyframes pulse-buy {
         0% { box-shadow: 0 0 20px rgba(0, 255, 0, 0.5); }
-        50% { box-shadow: 0 0 35px rgba(0, 255, 0, 0.8); }
+        50% { box-shadow: 0 0 40px rgba(0, 255, 0, 0.8); }
         100% { box-shadow: 0 0 20px rgba(0, 255, 0, 0.5); }
     }
     
-    .scalp-signal-warning {
-        background: linear-gradient(135deg, rgba(255, 0, 0, 0.15) 0%, rgba(100, 0, 0, 0.3) 100%);
+    .pmicro-sell-signal {
+        background: linear-gradient(135deg, rgba(255, 0, 0, 0.2) 0%, rgba(150, 0, 0, 0.4) 100%);
         border: 2px solid #ff0000;
         border-radius: 12px;
         padding: 1rem;
         margin: 0.5rem 0;
         box-shadow: 0 0 30px rgba(255, 0, 0, 0.5);
-        animation: pulse-warning 2s infinite;
+        animation: pulse-sell 2s infinite;
     }
     
-    @keyframes pulse-warning {
+    @keyframes pulse-sell {
         0% { box-shadow: 0 0 20px rgba(255, 0, 0, 0.5); }
-        50% { box-shadow: 0 0 35px rgba(255, 0, 0, 0.8); }
+        50% { box-shadow: 0 0 40px rgba(255, 0, 0, 0.8); }
         100% { box-shadow: 0 0 20px rgba(255, 0, 0, 0.5); }
+    }
+    
+    .pmicro-neutral-signal {
+        background: linear-gradient(135deg, rgba(255, 165, 0, 0.2) 0%, rgba(150, 100, 0, 0.4) 100%);
+        border: 2px solid #ffa500;
+        border-radius: 12px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        box-shadow: 0 0 30px rgba(255, 165, 0, 0.5);
     }
     
     .price-glow {
@@ -265,6 +262,42 @@ st.markdown("""
         transform: translateY(-3px);
     }
     
+    .orderbook-buy-row {
+        background: linear-gradient(90deg, rgba(0, 255, 0, 0.1) 0%, transparent 100%);
+        border-left: 3px solid #00ff00;
+        padding: 0.5rem;
+        margin: 0.1rem 0;
+        border-radius: 5px;
+    }
+    
+    .orderbook-sell-row {
+        background: linear-gradient(90deg, rgba(255, 0, 0, 0.1) 0%, transparent 100%);
+        border-left: 3px solid #ff0000;
+        padding: 0.5rem;
+        margin: 0.1rem 0;
+        border-radius: 5px;
+    }
+    
+    .orderbook-wall-buy {
+        background: linear-gradient(90deg, rgba(0, 255, 0, 0.3) 0%, transparent 100%);
+        border-left: 4px solid #00ff00;
+        font-weight: bold;
+        animation: wall-pulse 3s infinite;
+    }
+    
+    .orderbook-wall-sell {
+        background: linear-gradient(90deg, rgba(255, 0, 0, 0.3) 0%, transparent 100%);
+        border-left: 4px solid #ff0000;
+        font-weight: bold;
+        animation: wall-pulse 3s infinite;
+    }
+    
+    @keyframes wall-pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.7; }
+        100% { opacity: 1; }
+    }
+    
     .fire-effect {
         background: linear-gradient(45deg, #ff0000, #ff4400, #ff0000);
         background-size: 200% 200%;
@@ -287,7 +320,7 @@ st.markdown("""
         animation: pulse 2s infinite;
     }
     
-    /* Login Page Styles - SIMPLIFIED AND CENTERED */
+    /* Login Page Styles */
     .login-container {
         display: flex;
         justify-content: center;
@@ -411,30 +444,15 @@ st.markdown("""
         text-shadow: 0 0 10px #ff0000;
     }
     
-    .confirmation-badge {
-        display: inline-block;
-        background: linear-gradient(90deg, #00ff00, #00cc00);
-        color: #000000;
+    .pmicro-value {
         font-family: 'Orbitron', monospace;
-        font-weight: 700;
-        padding: 0.3rem 0.8rem;
-        border-radius: 15px;
-        font-size: 0.8rem;
-        margin: 0.2rem;
-        box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
-    }
-    
-    .warning-badge {
-        display: inline-block;
-        background: linear-gradient(90deg, #ff0000, #cc0000);
-        color: #ffffff;
-        font-family: 'Orbitron', monospace;
-        font-weight: 700;
-        padding: 0.3rem 0.8rem;
-        border-radius: 15px;
-        font-size: 0.8rem;
-        margin: 0.2rem;
-        box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+        font-size: 2.5rem;
+        font-weight: 900;
+        background: linear-gradient(90deg, #ff0000, #ff4444);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-align: center;
+        text-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -558,152 +576,182 @@ def get_crypto_prices():
     
     return prices
 
-class EMAScalpingAnalyzer:
+class OrderBookAnalyzer:
+    """P-micro analyzer using Binance order book data"""
     def __init__(self):
-        self.ema_fast = 9
-        self.ema_slow = 21
-        self.ema_signal = 50
-        self.price_history = {}
+        self.binance_api = "https://api.binance.com/api/v3/depth"
+        self.pmicro_history = {}
+        self.wall_threshold_btc = 10.0  # 10 BTC is considered a wall
+        self.wall_threshold_eth = 100.0  # 100 ETH is considered a wall
     
-    def calculate_ema(self, prices, period):
-        """Calculate Exponential Moving Average"""
-        if len(prices) < period:
-            return None
-        
-        alpha = 2 / (period + 1)
-        ema = prices[0]
-        
-        for price in prices[1:]:
-            ema = price * alpha + ema * (1 - alpha)
-        
-        return ema
-    
-    def get_historical_data(self, symbol, limit=100):
-        """Get historical price data for EMA calculation"""
+    def fetch_order_book(self, symbol, limit=50):
+        """Fetch order book data from Binance"""
         try:
-            # Using Binance API for historical data
-            url = f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval=1m&limit={limit}"
-            response = requests.get(url, timeout=5)
+            params = {
+                'symbol': symbol,
+                'limit': limit
+            }
+            response = requests.get(self.binance_api, params=params, timeout=5)
             
             if response.status_code == 200:
                 data = response.json()
-                closes = [float(candle[4]) for candle in data]  # Close prices
-                return closes
+                return {
+                    'bids': [[float(price), float(quantity)] for price, quantity in data['bids']],
+                    'asks': [[float(price), float(quantity)] for price, quantity in data['asks']],
+                    'timestamp': datetime.now().isoformat()
+                }
             else:
                 return None
         except Exception as e:
             return None
     
-    def generate_scalp_signal(self, symbol, current_price):
-        """Generate 1-minute scalp signal based on EMA crossover"""
-        try:
-            # Get historical data
-            historical_data = self.get_historical_data(symbol, 100)
-            
-            if not historical_data or len(historical_data) < self.ema_signal:
-                return {
-                    'signal': 'NO_DATA',
-                    'strength': 'NEUTRAL',
-                    'fast_ema': 0,
-                    'slow_ema': 0,
-                    'signal_ema': 0,
-                    'trend': 'SIDEWAYS',
-                    'crossover_strength': 0
-                }
-            
-            # Get historical data
-            historical_data = self.get_historical_data(symbol, 100)
-            
-            if not historical_data or len(historical_data) < self.ema_signal:
-                return {
-                    'signal': 'NO_DATA',
-                    'strength': 'NEUTRAL',
-                    'fast_ema': 0,
-                    'slow_ema': 0,
-                    'signal_ema': 0,
-                    'trend': 'SIDEWAYS',
-                    'crossover_strength': 0
-                }
-            
-            # Calculate EMAs
-            fast_ema = self.calculate_ema(historical_data[-self.ema_fast:], self.ema_fast)
-            slow_ema = self.calculate_ema(historical_data[-self.ema_slow:], self.ema_slow)
-            signal_ema = self.calculate_ema(historical_data[-self.ema_signal:], self.ema_signal)
-            
-            if not all([fast_ema, slow_ema, signal_ema]):
-                return {
-                    'signal': 'NO_DATA',
-                    'strength': 'NEUTRAL',
-                    'fast_ema': 0,
-                    'slow_ema': 0,
-                    'signal_ema': 0,
-                    'trend': 'SIDEWAYS',
-                    'crossover_strength': 0
-                }
-            
-            # Calculate crossover strength
-            crossover_strength = abs(fast_ema - slow_ema) / slow_ema * 100
-            
-            # Determine trend based on signal EMA
-            if current_price > signal_ema * 1.002:  # 0.2% above signal EMA
-                trend = "STRONG_BULLISH"
-            elif current_price > signal_ema:
-                trend = "BULLISH"
-            elif current_price < signal_ema * 0.998:  # 0.2% below signal EMA
-                trend = "STRONG_BEARISH"
-            elif current_price < signal_ema:
-                trend = "BEARISH"
-            else:
-                trend = "SIDEWAYS"
-            
-            # Generate scalp signal with strength
-            if fast_ema > slow_ema and trend in ["BULLISH", "STRONG_BULLISH"]:
-                signal = "SCALP_LONG"
-                if crossover_strength > 0.15 and trend == "STRONG_BULLISH":
-                    strength = "VERY_STRONG"
-                elif crossover_strength > 0.08:
-                    strength = "STRONG"
-                else:
-                    strength = "MODERATE"
-            elif fast_ema < slow_ema and trend in ["BEARISH", "STRONG_BEARISH"]:
-                signal = "SCALP_SHORT"
-                if crossover_strength > 0.15 and trend == "STRONG_BEARISH":
-                    strength = "VERY_STRONG"
-                elif crossover_strength > 0.08:
-                    strength = "STRONG"
-                else:
-                    strength = "MODERATE"
-            else:
-                signal = "NO_SCALP"
-                strength = "NEUTRAL"
-            
+    def calculate_pmicro(self, order_book_data):
+        """Calculate P-micro using the formula"""
+        if not order_book_data or not order_book_data['bids'] or not order_book_data['asks']:
+            return None
+        
+        # Get top bid and ask
+        top_bid_price = order_book_data['bids'][0][0]
+        top_bid_qty = order_book_data['bids'][0][1]
+        
+        top_ask_price = order_book_data['asks'][0][0]
+        top_ask_qty = order_book_data['asks'][0][1]
+        
+        # Calculate P-micro
+        pmicro = ((top_bid_price * top_bid_qty) + (top_ask_price * top_ask_qty)) / (top_bid_qty + top_ask_qty)
+        
+        return {
+            'pmicro': pmicro,
+            'bid_price': top_bid_price,
+            'bid_qty': top_bid_qty,
+            'ask_price': top_ask_price,
+            'ask_qty': top_ask_qty,
+            'spread': top_ask_price - top_bid_price,
+            'spread_percent': ((top_ask_price - top_bid_price) / top_bid_price) * 100,
+            'timestamp': order_book_data['timestamp']
+        }
+    
+    def detect_walls(self, order_book_data, symbol):
+        """Detect large buy/sell walls in order book"""
+        walls = {
+            'buy_walls': [],
+            'sell_walls': []
+        }
+        
+        # Set threshold based on symbol
+        if 'BTC' in symbol:
+            threshold = self.wall_threshold_btc
+        else:
+            threshold = self.wall_threshold_eth
+        
+        # Check buy walls (bids)
+        for price, quantity in order_book_data['bids'][:20]:  # Check top 20 bids
+            if quantity >= threshold:
+                walls['buy_walls'].append({
+                    'price': price,
+                    'quantity': quantity,
+                    'size_ratio': quantity / threshold
+                })
+        
+        # Check sell walls (asks)
+        for price, quantity in order_book_data['asks'][:20]:  # Check top 20 asks
+            if quantity >= threshold:
+                walls['sell_walls'].append({
+                    'price': price,
+                    'quantity': quantity,
+                    'size_ratio': quantity / threshold
+                })
+        
+        return walls
+    
+    def analyze_order_book_imbalance(self, order_book_data, levels=10):
+        """Analyze order book imbalance"""
+        if not order_book_data:
+            return None
+        
+        # Calculate total bid and ask volume for top N levels
+        total_bid_volume = sum([qty for _, qty in order_book_data['bids'][:levels]])
+        total_ask_volume = sum([qty for _, qty in order_book_data['asks'][:levels]])
+        
+        total_volume = total_bid_volume + total_ask_volume
+        
+        if total_volume > 0:
+            bid_ratio = total_bid_volume / total_volume
+            ask_ratio = total_ask_volume / total_volume
+        else:
+            bid_ratio = ask_ratio = 0.5
+        
+        imbalance = bid_ratio - ask_ratio
+        
+        return {
+            'bid_volume': total_bid_volume,
+            'ask_volume': total_ask_volume,
+            'bid_ratio': bid_ratio,
+            'ask_ratio': ask_ratio,
+            'imbalance': imbalance,
+            'imbalance_percent': imbalance * 100
+        }
+    
+    def generate_pmicro_signal(self, pmicro_data, current_price):
+        """Generate trading signal based on P-micro vs current price"""
+        if not pmicro_data or not current_price:
             return {
-                'signal': signal,
-                'strength': strength,
-                'fast_ema': fast_ema,
-                'slow_ema': slow_ema,
-                'signal_ema': signal_ema,
-                'trend': trend,
-                'price_vs_fast': current_price - fast_ema,
-                'crossover_strength': crossover_strength
-            }
-            
-        except Exception as e:
-            return {
-                'signal': 'ERROR',
+                'signal': 'NO_DATA',
                 'strength': 'NEUTRAL',
-                'fast_ema': 0,
-                'slow_ema': 0,
-                'signal_ema': 0,
-                'trend': 'SIDEWAYS',
-                'crossover_strength': 0
+                'pmicro_diff': 0,
+                'pmicro_diff_percent': 0
             }
+        
+        pmicro = pmicro_data['pmicro']
+        pmicro_diff = pmicro - current_price
+        pmicro_diff_percent = (pmicro_diff / current_price) * 100
+        
+        # Generate signal based on P-micro vs current price
+        if pmicro_diff_percent >= 0.5:  # P-micro > current price by 0.5% or more
+            signal = "🚀 STRONG BUY"
+            strength = "VERY_STRONG"
+        elif pmicro_diff_percent >= 0.2:  # P-micro > current price by 0.2-0.49%
+            signal = "🟢 BUY"
+            strength = "STRONG"
+        elif pmicro_diff_percent >= 0.05:  # P-micro > current price by 0.05-0.19%
+            signal = "🟡 WEAK BUY"
+            strength = "MODERATE"
+        elif pmicro_diff_percent <= -0.5:  # P-micro < current price by 0.5% or more
+            signal = "💀 STRONG SELL"
+            strength = "VERY_STRONG"
+        elif pmicro_diff_percent <= -0.2:  # P-micro < current price by 0.2-0.49%
+            signal = "🔴 SELL"
+            strength = "STRONG"
+        elif pmicro_diff_percent <= -0.05:  # P-micro < current price by 0.05-0.19%
+            signal = "🟠 WEAK SELL"
+            strength = "MODERATE"
+        else:  # Within ±0.05%
+            signal = "⚪ NEUTRAL"
+            strength = "NEUTRAL"
+        
+        # Add explanation
+        if "BUY" in signal:
+            explanation = "Buyers are stronger - P-micro indicates buying pressure"
+        elif "SELL" in signal:
+            explanation = "Sellers are stronger - P-micro indicates selling pressure"
+        else:
+            explanation = "Market is balanced - No clear directional bias"
+        
+        return {
+            'signal': signal,
+            'strength': strength,
+            'pmicro_diff': pmicro_diff,
+            'pmicro_diff_percent': pmicro_diff_percent,
+            'explanation': explanation,
+            'current_price': current_price,
+            'pmicro': pmicro
+        }
 
 class CryptoAnalyzer:
     def __init__(self, data_file="network_data.json"):
         self.data_file = data_file
         self.bitnodes_api = "https://bitnodes.io/api/v1/snapshots/latest/"
-        self.scalp_analyzer = EMAScalpingAnalyzer()
+        self.orderbook_analyzer = OrderBookAnalyzer()
         self.load_node_data()
     
     def load_node_data(self):
@@ -795,14 +843,13 @@ class CryptoAnalyzer:
         return True
     
     def calculate_tor_signal(self):
-        """Calculate signal based on Tor percentage changes - HIDDEN ANALYSIS"""
+        """Calculate signal based on Tor percentage changes"""
         if not self.current_data or not self.previous_data:
             return {
                 'signal': "🔄 NEED DATA",
                 'bias': "UPDATE_REQUIRED",
                 'strength': "NEUTRAL",
-                'tor_change': 0,
-                'momentum': 0
+                'tor_change': 0
             }
         
         current_tor_pct = self.current_data['tor_percentage']
@@ -811,10 +858,7 @@ class CryptoAnalyzer:
         # Calculate percentage change in Tor nodes
         tor_pct_change = current_tor_pct - previous_tor_pct
         
-        # Calculate momentum (rate of change)
-        tor_momentum = tor_pct_change * 100  # Amplify for scoring
-        
-        # TOR PERCENTAGE SIGNAL LOGIC (HIDDEN FROM USER)
+        # TOR PERCENTAGE SIGNAL LOGIC
         if tor_pct_change >= 1.0:  # Tor percentage increased by 1.0% or more
             signal = "🐲 GODZILLA DUMP 🐲"
             bias = "EXTREME_BEARISH"
@@ -848,144 +892,118 @@ class CryptoAnalyzer:
             'signal': signal,
             'bias': bias,
             'strength': strength,
-            'tor_change': tor_pct_change,
-            'momentum': tor_momentum
+            'tor_change': tor_pct_change
         }
     
-    def calculate_confirmation_score(self, ema_signal, tor_signal):
-        """Calculate confirmation score between EMA and Bitnodes signals"""
-        score = 0
-        confirmations = []
+    def generate_composite_signal(self, symbol, current_price, pmicro_signal, tor_signal):
+        """Combine P-micro and Bitnodes signals for enhanced accuracy"""
+        if not pmicro_signal or pmicro_signal['signal'] == 'NO_DATA':
+            return {
+                'composite_signal': 'WAITING_FOR_DATA',
+                'confidence': 'LOW',
+                'reasoning': 'Waiting for order book data...'
+            }
         
-        # EMA Signal Analysis
-        if ema_signal['signal'] == 'SCALP_LONG':
-            score += 25
-            confirmations.append("EMA Bullish")
-        elif ema_signal['signal'] == 'SCALP_SHORT':
-            score += 25
-            confirmations.append("EMA Bearish")
+        # Score components (0-100)
+        pmicro_score = 0
+        tor_score = 0
         
-        # EMA Strength Bonus
-        if ema_signal['strength'] == 'VERY_STRONG':
-            score += 20
-            confirmations.append("Very Strong EMA")
-        elif ema_signal['strength'] == 'STRONG':
-            score += 15
-            confirmations.append("Strong EMA")
-        elif ema_signal['strength'] == 'MODERATE':
-            score += 10
-            confirmations.append("Moderate EMA")
-        
-        # Bitnodes Signal Analysis
-        if 'BULLISH' in tor_signal['bias'] and ema_signal['signal'] == 'SCALP_LONG':
-            score += 30
-            confirmations.append("Bitnodes Confirmed")
-        elif 'BEARISH' in tor_signal['bias'] and ema_signal['signal'] == 'SCALP_SHORT':
-            score += 30
-            confirmations.append("Bitnodes Confirmed")
-        elif tor_signal['bias'] == 'NEUTRAL':
-            score += 10
-            confirmations.append("Bitnodes Neutral")
+        # Score P-micro signal
+        pmicro_strength = pmicro_signal['strength']
+        if pmicro_strength == 'VERY_STRONG':
+            pmicro_score = 50
+        elif pmicro_strength == 'STRONG':
+            pmicro_score = 40
+        elif pmicro_strength == 'MODERATE':
+            pmicro_score = 30
         else:
-            score -= 20
-            confirmations.append("Bitnodes Conflict!")
+            pmicro_score = 20
         
-        # Trend Alignment Bonus
-        if (ema_signal['trend'] in ['STRONG_BULLISH', 'BULLISH'] and 
-            'BULLISH' in tor_signal['bias']):
-            score += 15
-            confirmations.append("Trend Aligned")
-        elif (ema_signal['trend'] in ['STRONG_BEARISH', 'BEARISH'] and 
-              'BEARISH' in tor_signal['bias']):
-            score += 15
-            confirmations.append("Trend Aligned")
+        # Score Tor signal
+        tor_strength = tor_signal['strength']
+        if tor_strength == 'EXTREME':
+            tor_score = 50
+        elif tor_strength == 'STRONG':
+            tor_score = 40
+        elif tor_strength == 'MODERATE':
+            tor_score = 30
+        else:
+            tor_score = 20
         
-        return min(100, max(0, score)), confirmations
-    
-    def generate_composite_scalp_signal(self, symbol, current_price):
-        """Generate combined EMA + Bitnodes scalp signal with confirmation scoring"""
-        # Get individual signals
-        ema_signal = self.scalp_analyzer.generate_scalp_signal(symbol, current_price)
-        tor_signal = self.calculate_tor_signal()
+        # Check alignment
+        pmicro_direction = "BULLISH" if "BUY" in pmicro_signal['signal'] else "BEARISH" if "SELL" in pmicro_signal['signal'] else "NEUTRAL"
+        tor_direction = "BULLISH" if "BULLISH" in tor_signal['bias'] else "BEARISH" if "BEARISH" in tor_signal['bias'] else "NEUTRAL"
         
-        # Calculate confirmation score
-        confirmation_score, confirmations = self.calculate_confirmation_score(ema_signal, tor_signal)
+        alignment_bonus = 0
+        if pmicro_direction == tor_direction and pmicro_direction != "NEUTRAL":
+            alignment_bonus = 30
+        elif pmicro_direction != "NEUTRAL" and tor_direction != "NEUTRAL" and pmicro_direction != tor_direction:
+            alignment_bonus = -20
         
-        # Determine composite signal based on score and alignment
-        if confirmation_score >= 80:
-            if ema_signal['signal'] == 'SCALP_LONG':
-                composite_signal = "🚨 CONFIRMED LONG"
-                signal_class = "scalp-signal-confirmed"
-                urgency = "EXTREME"
+        total_score = pmicro_score + tor_score + alignment_bonus
+        
+        # Generate composite signal
+        if total_score >= 100:
+            if pmicro_direction == "BULLISH":
+                signal = "🚨 GODZILLA CONFIRMED BUY 🚨"
+                signal_class = "pmicro-buy-signal"
             else:
-                composite_signal = "🚨 CONFIRMED SHORT"
-                signal_class = "scalp-signal-confirmed"
-                urgency = "EXTREME"
-        elif confirmation_score >= 60:
-            if ema_signal['signal'] == 'SCALP_LONG':
-                composite_signal = "🔥 STRONG LONG"
-                signal_class = "scalp-signal-urgent"
-                urgency = "HIGH"
+                signal = "🚨 GODZILLA CONFIRMED SELL 🚨"
+                signal_class = "pmicro-sell-signal"
+            confidence = "EXTREME"
+        elif total_score >= 80:
+            if pmicro_direction == "BULLISH":
+                signal = "🔥 DRAGON FIRE BUY 🔥"
+                signal_class = "pmicro-buy-signal"
             else:
-                composite_signal = "🔥 STRONG SHORT"
-                signal_class = "scalp-signal-urgent"
-                urgency = "HIGH"
-        elif confirmation_score >= 40:
-            if ema_signal['signal'] == 'SCALP_LONG':
-                composite_signal = "🟢 SCALP LONG"
+                signal = "🔥 DRAGON FIRE SELL 🔥"
+                signal_class = "pmicro-sell-signal"
+            confidence = "VERY_HIGH"
+        elif total_score >= 60:
+            if pmicro_direction == "BULLISH":
+                signal = "🟢 STRONG BUY SIGNAL"
                 signal_class = "signal-buy"
-                urgency = "MEDIUM"
             else:
-                composite_signal = "🔴 SCALP SHORT"
+                signal = "🔴 STRONG SELL SIGNAL"
                 signal_class = "signal-sell"
-                urgency = "MEDIUM"
-        else:
-            if ema_signal['signal'] != 'NO_SCALP' and confirmation_score < 30:
-                composite_signal = "⚠️ CONFLICT SIGNAL"
-                signal_class = "scalp-signal-warning"
-                urgency = "LOW"
-            else:
-                composite_signal = "⚡ NO SCALP"
+            confidence = "HIGH"
+        elif total_score >= 40:
+            if pmicro_direction == "BULLISH":
+                signal = "🟡 WEAK BUY"
                 signal_class = "signal-neutral"
-                urgency = "LOW"
+            else:
+                signal = "🟠 WEAK SELL"
+                signal_class = "signal-neutral"
+            confidence = "MEDIUM"
+        else:
+            signal = "⚪ MARKET NEUTRAL"
+            signal_class = "signal-neutral"
+            confidence = "LOW"
+        
+        # Generate reasoning
+        reasoning_parts = []
+        reasoning_parts.append(f"P-micro: {pmicro_signal['signal']} ({pmicro_strength})")
+        reasoning_parts.append(f"Bitnodes: {tor_signal['signal']}")
+        
+        if alignment_bonus > 0:
+            reasoning_parts.append("✅ SIGNALS ALIGNED")
+        elif alignment_bonus < 0:
+            reasoning_parts.append("⚠️ SIGNAL CONFLICT")
+        
+        reasoning_parts.append(f"Confidence Score: {total_score}/100")
         
         return {
-            'composite_signal': composite_signal,
+            'composite_signal': signal,
             'signal_class': signal_class,
-            'urgency': urgency,
-            'confirmation_score': confirmation_score,
-            'confirmations': confirmations,
-            'ema_signal': ema_signal['signal'],
-            'ema_strength': ema_signal['strength'],
-            'tor_bias': tor_signal['bias'],
-            'tor_strength': tor_signal['strength'],
-            'trend': ema_signal['trend'],
-            'fast_ema': ema_signal['fast_ema'],
-            'slow_ema': ema_signal['slow_ema'],
-            'crossover_strength': ema_signal['crossover_strength'],
-            'reasoning': self.generate_reasoning(ema_signal, tor_signal, confirmations)
+            'confidence': confidence,
+            'reasoning': " • ".join(reasoning_parts),
+            'pmicro_signal': pmicro_signal['signal'],
+            'tor_signal': tor_signal['signal'],
+            'total_score': total_score,
+            'pmicro_score': pmicro_score,
+            'tor_score': tor_score,
+            'alignment': "ALIGNED" if alignment_bonus > 0 else "CONFLICT" if alignment_bonus < 0 else "NEUTRAL"
         }
-    
-    def generate_reasoning(self, ema_signal, tor_signal, confirmations):
-        """Generate detailed reasoning for the signal"""
-        reasoning = []
-        
-        # EMA Analysis
-        if ema_signal['signal'] == 'SCALP_LONG':
-            reasoning.append(f"EMA Bullish Crossover (Strength: {ema_signal['crossover_strength']:.3f}%)")
-        elif ema_signal['signal'] == 'SCALP_SHORT':
-            reasoning.append(f"EMA Bearish Crossover (Strength: {ema_signal['crossover_strength']:.3f}%)")
-        
-        # Trend Analysis
-        reasoning.append(f"Trend: {ema_signal['trend']}")
-        
-        # Bitnodes Analysis
-        reasoning.append(f"Bitnodes: {tor_signal['bias']} ({tor_signal['strength']})")
-        
-        # Add confirmations
-        reasoning.extend(confirmations)
-        
-        return " • ".join(reasoning)
 
 def get_coin_display_name(symbol):
     """Get display name for crypto symbols"""
@@ -1003,6 +1021,60 @@ def get_coin_emoji(symbol):
     }
     return emojis.get(symbol, '💀')
 
+def display_order_book_table(order_book_data, symbol, title="Order Book"):
+    """Display order book as a table with styling"""
+    if not order_book_data:
+        return
+    
+    st.markdown(f'<h3 style="font-family: Orbitron; color: #ff4444; margin: 1rem 0;">{title}</h3>', unsafe_allow_html=True)
+    
+    # Create two columns for bids and asks
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown('<h4 style="color: #00ff00; font-family: Rajdhani;">🟢 BUY ORDERS (Bids)</h4>', unsafe_allow_html=True)
+        
+        # Display top 10 bids
+        for i, (price, qty) in enumerate(order_book_data['bids'][:10]):
+            # Check if this is a wall
+            is_wall = False
+            if ('BTC' in symbol and qty >= 10) or ('ETH' in symbol and qty >= 100):
+                is_wall = True
+            
+            row_class = "orderbook-wall-buy" if is_wall else "orderbook-buy-row"
+            
+            st.markdown(f'''
+            <div class="{row_class}">
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #ffffff; font-family: Rajdhani;">${price:,.2f}</span>
+                    <span style="color: #00ff00; font-family: Orbitron;">{qty:.4f}</span>
+                    <span style="color: #888888; font-family: Rajdhani;">${price*qty:,.0f}</span>
+                </div>
+            </div>
+            ''', unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown('<h4 style="color: #ff0000; font-family: Rajdhani;">🔴 SELL ORDERS (Asks)</h4>', unsafe_allow_html=True)
+        
+        # Display top 10 asks
+        for i, (price, qty) in enumerate(order_book_data['asks'][:10]):
+            # Check if this is a wall
+            is_wall = False
+            if ('BTC' in symbol and qty >= 10) or ('ETH' in symbol and qty >= 100):
+                is_wall = True
+            
+            row_class = "orderbook-wall-sell" if is_wall else "orderbook-sell-row"
+            
+            st.markdown(f'''
+            <div class="{row_class}">
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #ffffff; font-family: Rajdhani;">${price:,.2f}</span>
+                    <span style="color: #ff0000; font-family: Orbitron;">{qty:.4f}</span>
+                    <span style="color: #888888; font-family: Rajdhani;">${price*qty:,.0f}</span>
+                </div>
+            </div>
+            ''', unsafe_allow_html=True)
+
 def main_app():
     """Main application after login"""
     # Initialize analyzer
@@ -1019,7 +1091,7 @@ def main_app():
     
     # GODZILLERS Header
     st.markdown('<h1 class="godzillers-header">🔥 GODZILLERS CRYPTO TRACKER</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="godzillers-subheader">AI-POWERED SIGNALS • REAL-TIME PRICES • DRAGON FIRE PRECISION</p>', unsafe_allow_html=True)
+    st.markdown('<p class="godzillers-subheader">P-MICRO ORDER BOOK ANALYSIS • BITNODES INTEGRATION • DRAGON FIRE PRECISION</p>', unsafe_allow_html=True)
     
     # UPDATE SIGNALS BUTTON
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
@@ -1077,7 +1149,6 @@ def main_app():
         # Create columns for coin grid
         coins_to_display = {k: v for k, v in prices.items() if k != 'BTCUSDT' and v and v > 0}
         if coins_to_display:
-            # Use 2 columns for cleaner layout with fewer coins
             cols = st.columns(2)
             
             for idx, (symbol, price) in enumerate(coins_to_display.items()):
@@ -1101,74 +1172,148 @@ def main_app():
     else:
         st.error("❌ Could not fetch crypto prices")
     
-    # ENHANCED EMA SCALPING SECTION WITH CONFIRMATION
+    # P-MICRO ORDER BOOK ANALYZER SECTION
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-    st.markdown('<h2 class="section-header">⚡ DRAGON SCALPING SIGNALS</h2>', unsafe_allow_html=True)
-    st.markdown('<p style="color: #ff8888; font-family: Rajdhani; text-align: center;">EMA + BITNODES CONFIRMATION SYSTEM • 1-MINUTE TIMEFRAME</p>', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-header">📊 P-MICRO ORDER BOOK ANALYSIS</h2>', unsafe_allow_html=True)
+    st.markdown('<p style="color: #ff8888; font-family: Rajdhani; text-align: center;">P-micro = (Bid Price × Bid Qty + Ask Price × Ask Qty) ÷ (Bid Qty + Ask Qty)</p>', unsafe_allow_html=True)
     
-    if analyzer.current_data and analyzer.previous_data and prices:
-        # Display scalp signals for each coin
-        scalp_cols = st.columns(2)
-        
-        for idx, symbol in enumerate(['BTCUSDT', 'ETHUSDT']):
-            if prices.get(symbol):
-                with scalp_cols[idx % 2]:
-                    current_price = prices[symbol]
-                    composite_signal = analyzer.generate_composite_scalp_signal(symbol, current_price)
+    if prices:
+        # P-micro analysis for each coin
+        for symbol in ['BTCUSDT', 'ETHUSDT']:
+            current_price = prices.get(symbol)
+            if current_price:
+                st.markdown(f'<div class="divider"></div>', unsafe_allow_html=True)
+                
+                # Get order book data
+                order_book_data = analyzer.orderbook_analyzer.fetch_order_book(symbol, limit=50)
+                
+                if order_book_data:
+                    # Calculate P-micro
+                    pmicro_data = analyzer.orderbook_analyzer.calculate_pmicro(order_book_data)
                     
-                    emoji = get_coin_emoji(symbol)
-                    name = get_coin_display_name(symbol)
-                    
-                    # Display main signal card
-                    st.markdown(f'''
-                    <div class="{composite_signal['signal_class']}">
-                        <div style="text-align: center;">
-                            <h3 style="font-family: Orbitron; margin: 0.5rem 0; font-size: 1.3rem;">{emoji} {name}</h3>
-                            <p style="font-family: Orbitron; font-size: 1.5rem; font-weight: 700; margin: 0.5rem 0;">{composite_signal['composite_signal']}</p>
-                            <p style="color: #ffd700; font-family: Orbitron; font-size: 1.1rem; margin: 0.2rem 0;">CONFIRMATION: {composite_signal['confirmation_score']}%</p>
-                            <p style="color: #ff8888; font-family: Rajdhani; font-size: 0.9rem; margin: 0.2rem 0;">Urgency: {composite_signal['urgency']}</p>
-                            <p style="color: #ffffff; font-family: Rajdhani; font-size: 0.8rem; margin: 0.2rem 0;">{composite_signal['reasoning']}</p>
-                        </div>
-                    </div>
-                    ''', unsafe_allow_html=True)
-                    
-                    # Display confirmation badges
-                    st.markdown('<div style="text-align: center; margin: 0.5rem 0;">', unsafe_allow_html=True)
-                    for confirmation in composite_signal['confirmations']:
-                        if "Confirmed" in confirmation or "Aligned" in confirmation:
-                            st.markdown(f'<span class="confirmation-badge">✓ {confirmation}</span>', unsafe_allow_html=True)
-                        elif "Conflict" in confirmation:
-                            st.markdown(f'<span class="warning-badge">⚠ {confirmation}</span>', unsafe_allow_html=True)
-                        else:
-                            st.markdown(f'<span style="display: inline-block; background: #444; color: #fff; padding: 0.2rem 0.5rem; border-radius: 10px; font-size: 0.7rem; margin: 0.1rem;">{confirmation}</span>', unsafe_allow_html=True)
-                    st.markdown('</div>', unsafe_allow_html=True)
-                    
-                    # Display EMA values and metrics
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.metric(
-                            label="FAST EMA (9)",
-                            value=f"${composite_signal['fast_ema']:,.2f}" if composite_signal['fast_ema'] > 0 else "N/A",
-                            delta=f"{composite_signal['crossover_strength']:.3f}% strength"
-                        )
-                    with col2:
-                        st.metric(
-                            label="SLOW EMA (21)", 
-                            value=f"${composite_signal['slow_ema']:,.2f}" if composite_signal['slow_ema'] > 0 else "N/A",
-                            delta=composite_signal['ema_strength']
-                        )
-                    with col3:
-                        st.metric(
-                            label="BITNODES BIAS",
-                            value=composite_signal['tor_bias'].replace('_', ' '),
-                            delta=composite_signal['tor_strength']
-                        )
-    else:
-        st.info("🔥 Generate signals to see EMA + Bitnodes confirmed scalping opportunities")
+                    if pmicro_data:
+                        # Generate P-micro signal
+                        pmicro_signal = analyzer.orderbook_analyzer.generate_pmicro_signal(pmicro_data, current_price)
+                        
+                        # Get Bitnodes signal
+                        tor_signal = analyzer.calculate_tor_signal()
+                        
+                        # Generate composite signal
+                        composite_signal = analyzer.generate_composite_signal(symbol, current_price, pmicro_signal, tor_signal)
+                        
+                        emoji = get_coin_emoji(symbol)
+                        name = get_coin_display_name(symbol)
+                        
+                        # Display main P-micro analysis
+                        col1, col2, col3 = st.columns([2, 1, 1])
+                        
+                        with col1:
+                            # P-micro value with styling
+                            st.markdown(f'''
+                            <div style="text-align: center; padding: 1rem;">
+                                <p style="color: #ff8888; font-family: Rajdhani; margin-bottom: 0.5rem;">{emoji} {name} P-MICRO VALUE</p>
+                                <p class="pmicro-value">${pmicro_data["pmicro"]:,.2f}</p>
+                                <p style="color: #ff8888; font-family: Rajdhani; margin-top: 0.5rem;">
+                                    vs Current: ${current_price:,.2f} 
+                                    • Diff: {pmicro_signal["pmicro_diff_percent"]:+.3f}%
+                                </p>
+                            </div>
+                            ''', unsafe_allow_html=True)
+                        
+                        with col2:
+                            st.metric(
+                                label="BID PRICE",
+                                value=f"${pmicro_data['bid_price']:,.2f}",
+                                delta=f"Qty: {pmicro_data['bid_qty']:.4f}"
+                            )
+                        
+                        with col3:
+                            st.metric(
+                                label="ASK PRICE",
+                                value=f"${pmicro_data['ask_price']:,.2f}",
+                                delta=f"Qty: {pmicro_data['ask_qty']:.4f}",
+                                delta_color="inverse"
+                            )
+                        
+                        # Display composite signal
+                        st.markdown(f'<div class="{composite_signal["signal_class"]}">', unsafe_allow_html=True)
+                        st.markdown(f'<h2 style="font-family: Orbitron; text-align: center; margin: 0.5rem 0;">{composite_signal["composite_signal"]}</h2>', unsafe_allow_html=True)
+                        st.markdown(f'<p style="text-align: center; color: #ff8888; font-family: Rajdhani; margin: 0.5rem 0;">{composite_signal["reasoning"]}</p>', unsafe_allow_html=True)
+                        st.markdown(f'<p style="text-align: center; color: #ffffff; font-family: Rajdhani; margin: 0.5rem 0;">Confidence: {composite_signal["confidence"]} • Score: {composite_signal["total_score"]}/100</p>', unsafe_allow_html=True)
+                        st.markdown('</div>', unsafe_allow_html=True)
+                        
+                        # Display order book table
+                        display_order_book_table(order_book_data, symbol, f"{emoji} {name} Order Book - Top 10 Levels")
+                        
+                        # Display order book imbalance analysis
+                        imbalance = analyzer.orderbook_analyzer.analyze_order_book_imbalance(order_book_data, levels=20)
+                        if imbalance:
+                            col1, col2, col3, col4 = st.columns(4)
+                            
+                            with col1:
+                                st.metric(
+                                    label="BUY VOLUME",
+                                    value=f"{imbalance['bid_volume']:.2f}",
+                                    delta=f"{imbalance['bid_ratio']*100:.1f}%"
+                                )
+                            
+                            with col2:
+                                st.metric(
+                                    label="SELL VOLUME",
+                                    value=f"{imbalance['ask_volume']:.2f}",
+                                    delta=f"{imbalance['ask_ratio']*100:.1f}%",
+                                    delta_color="inverse"
+                                )
+                            
+                            with col3:
+                                imbalance_color = "normal" if imbalance['imbalance'] > 0 else "inverse"
+                                st.metric(
+                                    label="ORDER BOOK IMBALANCE",
+                                    value=f"{imbalance['imbalance_percent']:+.2f}%",
+                                    delta="Buyers Dominant" if imbalance['imbalance'] > 0 else "Sellers Dominant"
+                                )
+                            
+                            with col4:
+                                st.metric(
+                                    label="SPREAD",
+                                    value=f"${pmicro_data['spread']:.2f}",
+                                    delta=f"{pmicro_data['spread_percent']:.3f}%"
+                                )
+                        
+                        # Detect and display walls
+                        walls = analyzer.orderbook_analyzer.detect_walls(order_book_data, symbol)
+                        if walls['buy_walls'] or walls['sell_walls']:
+                            st.markdown('<h4 style="color: #ffd700; font-family: Orbitron; margin: 1rem 0;">🚨 LARGE ORDER WALLS DETECTED</h4>', unsafe_allow_html=True)
+                            
+                            if walls['buy_walls']:
+                                st.markdown('<p style="color: #00ff00; font-family: Rajdhani;">🟢 BUY WALLS (Support):</p>', unsafe_allow_html=True)
+                                for wall in walls['buy_walls']:
+                                    st.markdown(f'''
+                                    <div class="orderbook-wall-buy">
+                                        <div style="display: flex; justify-content: space-between;">
+                                            <span style="color: #ffffff; font-family: Rajdhani;">${wall["price"]:,.2f}</span>
+                                            <span style="color: #00ff00; font-family: Orbitron;">{wall["quantity"]:.2f}</span>
+                                            <span style="color: #ffd700; font-family: Rajdhani;">{wall["size_ratio"]:.1f}x Wall</span>
+                                        </div>
+                                    </div>
+                                    ''', unsafe_allow_html=True)
+                            
+                            if walls['sell_walls']:
+                                st.markdown('<p style="color: #ff0000; font-family: Rajdhani;">🔴 SELL WALLS (Resistance):</p>', unsafe_allow_html=True)
+                                for wall in walls['sell_walls']:
+                                    st.markdown(f'''
+                                    <div class="orderbook-wall-sell">
+                                        <div style="display: flex; justify-content: space-between;">
+                                            <span style="color: #ffffff; font-family: Rajdhani;">${wall["price"]:,.2f}</span>
+                                            <span style="color: #ff0000; font-family: Orbitron;">{wall["quantity"]:.2f}</span>
+                                            <span style="color: #ffd700; font-family: Rajdhani;">{wall["size_ratio"]:.1f}x Wall</span>
+                                        </div>
+                                    </div>
+                                    ''', unsafe_allow_html=True)
     
     # MAIN SIGNAL DISPLAY WITH GODZILLERS THEME
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-    st.markdown('<h2 class="section-header">🎯 GODZILLERS AI SIGNALS</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-header">🎯 BITNODES NETWORK SIGNALS</h2>', unsafe_allow_html=True)
     
     if analyzer.current_data and analyzer.previous_data:
         tor_signal_data = analyzer.calculate_tor_signal()
@@ -1177,47 +1322,81 @@ def main_app():
         if "GODZILLA DUMP" in tor_signal_data['signal']:
             signal_class = "signal-sell"
             emoji = "🐲💀🔥"
-            explanation = "EXTREME BEARISH SIGNAL - Market conditions indicate strong selling pressure"
+            explanation = "EXTREME BEARISH - Tor nodes increasing significantly"
         elif "STRONG SELL" in tor_signal_data['signal']:
             signal_class = "signal-sell"
             emoji = "🐲🔥"
-            explanation = "STRONG SELL SIGNAL - Significant bearish momentum detected"
+            explanation = "STRONG SELL - Tor nodes increasing"
         elif "SELL" in tor_signal_data['signal']:
             signal_class = "signal-sell"
             emoji = "🔴"
-            explanation = "SELL SIGNAL - Bearish conditions forming"
+            explanation = "SELL - Tor nodes slightly increasing"
         elif "GODZILLA PUMP" in tor_signal_data['signal']:
             signal_class = "signal-buy"
             emoji = "🐲🚀🌟"
-            explanation = "EXTREME BULLISH SIGNAL - Strong buying pressure detected"
+            explanation = "EXTREME BULLISH - Tor nodes decreasing significantly"
         elif "STRONG BUY" in tor_signal_data['signal']:
             signal_class = "signal-buy"
             emoji = "🐲🚀"
-            explanation = "STRONG BUY SIGNAL - Significant bullish momentum building"
+            explanation = "STRONG BUY - Tor nodes decreasing"
         elif "BUY" in tor_signal_data['signal']:
             signal_class = "signal-buy"
             emoji = "🟢"
-            explanation = "BUY SIGNAL - Bullish conditions forming"
+            explanation = "BUY - Tor nodes slightly decreasing"
         else:
             signal_class = "signal-neutral"
             emoji = "🐲⚡"
-            explanation = "MARKET NEUTRAL - Awaiting stronger directional signals"
+            explanation = "MARKET NEUTRAL - Tor nodes stable"
         
         st.markdown(f'<div class="{signal_class}">', unsafe_allow_html=True)
         st.markdown(f'<h2 style="font-family: Orbitron; text-align: center; margin: 0.5rem 0;">{emoji} {tor_signal_data["signal"]} {emoji}</h2>', unsafe_allow_html=True)
         st.markdown(f'<p style="text-align: center; color: #ff8888; font-family: Rajdhani; margin: 0.5rem 0;">{explanation}</p>', unsafe_allow_html=True)
-        st.markdown(f'<p style="text-align: center; font-family: Orbitron; color: #ffffff; margin: 0.5rem 0;">Signal Strength: {tor_signal_data["strength"]} • Tor Change: {tor_signal_data["tor_change"]:+.3f}%</p>', unsafe_allow_html=True)
+        
+        # Display Bitnodes metrics
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric(
+                label="TOTAL NODES",
+                value=f"{analyzer.current_data['total_nodes']:,}",
+                delta="Network Size"
+            )
+        
+        with col2:
+            st.metric(
+                label="TOR NODES",
+                value=f"{analyzer.current_data['tor_nodes']:,}",
+                delta=f"{analyzer.current_data['tor_percentage']:.2f}%"
+            )
+        
+        with col3:
+            st.metric(
+                label="ACTIVE NODES",
+                value=f"{analyzer.current_data['active_nodes']:,}",
+                delta=f"{analyzer.current_data['active_ratio']*100:.1f}%"
+            )
+        
+        with col4:
+            delta_value = f"{tor_signal_data['tor_change']:+.3f}%"
+            delta_color = "normal" if tor_signal_data['tor_change'] < 0 else "inverse"
+            st.metric(
+                label="TOR CHANGE",
+                value=f"{analyzer.current_data['tor_percentage']:.3f}%",
+                delta=delta_value,
+                delta_color=delta_color
+            )
+        
         st.markdown('</div>', unsafe_allow_html=True)
     else:
-        st.info("🔥 Click 'GENERATE SIGNALS' to get AI-powered trading signals")
+        st.info("🔥 Click 'GENERATE SIGNALS' to get Bitnodes network signals")
     
     # GODZILLERS Trademark Footer
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
     st.markdown("""
     <div class="trademark">
-    <p>🔥 GODZILLERS CRYPTO WARFARE SYSTEM 🔥</p>
+    <p>🔥 GODZILLERS P-MICRO ORDER BOOK ANALYZER 🔥</p>
     <p>© 2025 GODZILLERS CRYPTO TRACKER • PROPRIETARY AI TECHNOLOGY</p>
-    <p style="font-size: 0.7rem; color: #ff6666;">FORGE YOUR FORTUNE WITH DRAGON FIRE PRECISION</p>
+    <p style="font-size: 0.7rem; color: #ff6666;">P-micro = (Bid×Qbid + Ask×Qask) ÷ (Qbid + Qask) • Real-time Order Book Intelligence</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -1236,4 +1415,4 @@ def main():
         main_app()
 
 if __name__ == "__main__":
-    main()  
+    main()
