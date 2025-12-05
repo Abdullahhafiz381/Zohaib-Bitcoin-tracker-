@@ -1097,7 +1097,7 @@ def main_app():
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
     col1, col2 = st.columns([3, 1])
     with col1:
-        st.markdown('<h2 class="section-header">🎯 GODZILLERS AI SIGNALS</h2>', unsafe_allow_html=True)
+        st.markdown('<h2 class="section-header">🐉 GODZILLERS AI SIGNALS</h2>', unsafe_allow_html=True)
     with col2:
         if st.button("🐉 GENERATE SIGNALS", key="refresh_main", use_container_width=True, type="primary"):
             with st.spinner("🔥 Activating dragon fire analysis..."):
@@ -1174,8 +1174,8 @@ def main_app():
     
     # P-MICRO ORDER BOOK ANALYZER SECTION
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-    st.markdown('<h2 class="section-header">📊 P-MICRO ORDER BOOK ANALYSIS</h2>', unsafe_allow_html=True)
-    st.markdown('<p style="color: #ff8888; font-family: Rajdhani; text-align: center;">P-micro = (Bid Price × Bid Qty + Ask Price × Ask Qty) ÷ (Bid Qty + Ask Qty)</p>', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-header">💀 P-MICRO ORDER BOOK ANALYSIS</h2>', unsafe_allow_html=True)
+    st.markdown('<p style="color: #ff8888; font-family: Rajdhani; text-align: </p>', unsafe_allow_html=True)
     
     if prices:
         # P-micro analysis for each coin
