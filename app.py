@@ -354,8 +354,18 @@ class MathematicalEquations:
             return None
         
         try:
-            orderbook = self.exchange.fetch_order_book(symbol, self.ORDERBOOK_DEPTH)
-            ticker = self.exchange.fetch_ticker(symbol)
+            # Try with the given symbol first
+            try:
+                orderbook = self.exchange.fetch_order_book(symbol, self.ORDERBOOK_DEPTH)
+                ticker = self.exchange.fetch_ticker(symbol)
+            except:
+                # Try with USDT pair
+                if not symbol.endswith('/USDT'):
+                    symbol_usdt = symbol + '/USDT'
+                    orderbook = self.exchange.fetch_order_book(symbol_usdt, self.ORDERBOOK_DEPTH)
+                    ticker = self.exchange.fetch_ticker(symbol_usdt)
+                else:
+                    return None
             
             # Extract data for equations
             bid = ticker['bid'] if ticker['bid'] else orderbook['bids'][0][0]
@@ -486,207 +496,12 @@ class MathematicalEquations:
             'sigma': round(sigma_t, 4)
         }
 
-# ==================== ORIGINAL BOT CLASSES (KEPT SAME) ====================
-# Simple authentication system
-def check_credentials(username, password):
-    """Check if username and password are correct"""
-    valid_users = {
-        "godziller": "dragonfire2025",
-        "admin": "cryptoking",
-        "trader": "bullmarket"
-    }
-    return username in valid_users and valid_users[username] == password
-
-def login_page():
-    """Display login page - SIMPLIFIED VERSION"""
-    st.markdown("""
-    <style>
-    .main .block-container {
-        padding-top: 0 !important;
-        padding-bottom: 0 !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    col1, col2, col3 = st.columns([1, 2, 1])
-    
-    with col2:
-        st.markdown("""
-        <div style='
-            background: rgba(20, 0, 0, 0.95);
-            border: 2px solid rgba(255, 0, 0, 0.6);
-            border-radius: 20px;
-            padding: 3rem;
-            box-shadow: 0 0 50px rgba(255, 0, 0, 0.5);
-            text-align: center;
-            margin: 2rem 0;
-        '>
-            <h1 style='
-                background: linear-gradient(90deg, #ff0000 0%, #ff4444 100%);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                font-family: Orbitron, monospace;
-                font-weight: 900;
-                font-size: 2.5rem;
-                margin-bottom: 1rem;
-                text-shadow: 0 0 20px rgba(255, 0, 0, 0.7);
-            '>🐲 GODZILLERS</h1>
-            <p style='
-                color: #ff6666;
-                font-family: Orbitron, monospace;
-                font-size: 1rem;
-                margin-bottom: 2rem;
-                letter-spacing: 2px;
-            '>MATHEMATICAL HYBRID CONFIRMATION</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        with st.form("login_form"):
-            username = st.text_input("👤 DRAGON NAME", placeholder="Enter your dragon name...")
-            password = st.text_input("🔐 FIRE BREATH", type="password", placeholder="Enter your fire breath...")
-            
-            login_button = st.form_submit_button("🔥 IGNITE DRAGON FIRE", use_container_width=True)
-            
-            if login_button:
-                if check_credentials(username, password):
-                    st.session_state.logged_in = True
-                    st.session_state.username = username
-                    st.success("✅ Dragon fire ignited! Access granted.")
-                    st.rerun()
-                else:
-                    st.error("❌ Invalid dragon name or fire breath!")
-
-# EMAScalpingAnalyzer (Original - Kept Same)
-class EMAScalpingAnalyzer:
-    def __init__(self):
-        self.ema_fast = 9
-        self.ema_slow = 21
-        self.ema_signal = 50
-        self.price_history = {}
-    
-    def calculate_ema(self, prices, period):
-        """Calculate Exponential Moving Average"""
-        if len(prices) < period:
-            return None
-        
-        alpha = 2 / (period + 1)
-        ema = prices[0]
-        
-        for price in prices[1:]:
-            ema = price * alpha + ema * (1 - alpha)
-        
-        return ema
-    
-    def get_historical_data(self, symbol, limit=100):
-        """Get historical price data for EMA calculation"""
-        try:
-            url = f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval=1m&limit={limit}"
-            response = requests.get(url, timeout=5)
-            
-            if response.status_code == 200:
-                data = response.json()
-                closes = [float(candle[4]) for candle in data]
-                return closes
-            else:
-                return None
-        except Exception as e:
-            return None
-    
-    def generate_scalp_signal(self, symbol, current_price):
-        """Generate 1-minute scalp signal based on EMA crossover"""
-        try:
-            historical_data = self.get_historical_data(symbol, 100)
-            
-            if not historical_data or len(historical_data) < self.ema_signal:
-                return {
-                    'signal': 'NO_DATA',
-                    'strength': 'NEUTRAL',
-                    'fast_ema': 0,
-                    'slow_ema': 0,
-                    'signal_ema': 0,
-                    'trend': 'SIDEWAYS',
-                    'crossover_strength': 0
-                }
-            
-            # Calculate EMAs
-            fast_ema = self.calculate_ema(historical_data[-self.ema_fast:], self.ema_fast)
-            slow_ema = self.calculate_ema(historical_data[-self.ema_slow:], self.ema_slow)
-            signal_ema = self.calculate_ema(historical_data[-self.ema_signal:], self.ema_signal)
-            
-            if not all([fast_ema, slow_ema, signal_ema]):
-                return {
-                    'signal': 'NO_DATA',
-                    'strength': 'NEUTRAL',
-                    'fast_ema': 0,
-                    'slow_ema': 0,
-                    'signal_ema': 0,
-                    'trend': 'SIDEWAYS',
-                    'crossover_strength': 0
-                }
-            
-            # Calculate crossover strength
-            crossover_strength = abs(fast_ema - slow_ema) / slow_ema * 100
-            
-            # Determine trend
-            if current_price > signal_ema * 1.002:
-                trend = "STRONG_BULLISH"
-            elif current_price > signal_ema:
-                trend = "BULLISH"
-            elif current_price < signal_ema * 0.998:
-                trend = "STRONG_BEARISH"
-            elif current_price < signal_ema:
-                trend = "BEARISH"
-            else:
-                trend = "SIDEWAYS"
-            
-            # Generate signal
-            if fast_ema > slow_ema and trend in ["BULLISH", "STRONG_BULLISH"]:
-                signal = "SCALP_LONG"
-                if crossover_strength > 0.15 and trend == "STRONG_BULLISH":
-                    strength = "VERY_STRONG"
-                elif crossover_strength > 0.08:
-                    strength = "STRONG"
-                else:
-                    strength = "MODERATE"
-            elif fast_ema < slow_ema and trend in ["BEARISH", "STRONG_BEARISH"]:
-                signal = "SCALP_SHORT"
-                if crossover_strength > 0.15 and trend == "STRONG_BEARISH":
-                    strength = "VERY_STRONG"
-                elif crossover_strength > 0.08:
-                    strength = "STRONG"
-                else:
-                    strength = "MODERATE"
-            else:
-                signal = "NO_SCALP"
-                strength = "NEUTRAL"
-            
-            return {
-                'signal': signal,
-                'strength': strength,
-                'fast_ema': fast_ema,
-                'slow_ema': slow_ema,
-                'signal_ema': signal_ema,
-                'trend': trend,
-                'crossover_strength': crossover_strength
-            }
-            
-        except Exception as e:
-            return {
-                'signal': 'ERROR',
-                'strength': 'NEUTRAL',
-                'fast_ema': 0,
-                'slow_ema': 0,
-                'signal_ema': 0,
-                'trend': 'SIDEWAYS',
-                'crossover_strength': 0
-            }
-
+# ==================== BITNODE BOT ANALYSIS (KEPT) ====================
 # CryptoAnalyzer (Original - Kept Same)
 class CryptoAnalyzer:
     def __init__(self, data_file="network_data.json"):
         self.data_file = data_file
         self.bitnodes_api = "https://bitnodes.io/api/v1/snapshots/latest/"
-        self.scalp_analyzer = EMAScalpingAnalyzer()
         self.load_node_data()
     
     def load_node_data(self):
@@ -824,16 +639,15 @@ class CryptoAnalyzer:
 
 # ==================== HYBRID CONFIRMATION SYSTEM ====================
 class HybridConfirmationSystem:
-    """Combine Original Bot + Mathematical Equations for confirmation"""
+    """Combine Bitnode Bot + Mathematical Equations for confirmation"""
     
     def __init__(self):
         self.original_analyzer = CryptoAnalyzer()
         self.math_equations = MathematicalEquations()
+        # Your specific coins list
         self.trading_pairs = [
-            "BTC/USDT", "ETH/USDT", "BNB/USDT", "SOL/USDT", "XRP/USDT",
-            "ADA/USDT", "DOGE/USDT", "AVAX/USDT", "LINK/USDT", "DOT/USDT",
-            "MATIC/USDT", "LTC/USDT", "BCH/USDT", "ATOM/USDT", "OP/USDT",
-            "ARB/USDT", "APE/USDT", "SUI/USDT", "NEAR/USDT", "FIL/USDT"
+            "BTC/USDT", "ETH/USDT", "SUI/USDT", "LINK/USDT", "SOL/USDT",
+            "XRP/USDT", "TAO/USDT", "ENA/USDT", "ADA/USDT", "DOGE/USDT", "BRETT/USDT"
         ]
     
     def get_current_price(self, symbol):
@@ -851,16 +665,13 @@ class HybridConfirmationSystem:
             return None
     
     def generate_hybrid_signal(self, symbol):
-        """Generate hybrid signal using both systems"""
+        """Generate hybrid signal using Bitnode and Mathematical equations"""
         # Get current price
         current_price = self.get_current_price(symbol)
         if not current_price:
             return None
         
-        # Get original bot signal (EMA + Bitnodes)
-        ema_signal = self.original_analyzer.scalp_analyzer.generate_scalp_signal(
-            symbol.replace("/", ""), current_price
-        )
+        # Get Bitnode bot signal (Tor analysis)
         tor_signal = self.original_analyzer.calculate_tor_signal()
         
         # Get mathematical signal
@@ -873,25 +684,27 @@ class HybridConfirmationSystem:
         signals_agree = False
         
         # Convert all signals to simple BUY/SELL/HOLD
-        original_direction = "HOLD"
-        if ema_signal['signal'] == 'SCALP_LONG' and 'BULLISH' in tor_signal['bias']:
-            original_direction = "BUY"
-        elif ema_signal['signal'] == 'SCALP_SHORT' and 'BEARISH' in tor_signal['bias']:
-            original_direction = "SELL"
+        bitnode_direction = "HOLD"
+        tor_bias = tor_signal['bias']
+        
+        if "BULLISH" in tor_bias:
+            bitnode_direction = "BUY"
+        elif "BEARISH" in tor_bias:
+            bitnode_direction = "SELL"
         
         math_direction = math_signal['direction']
         
         # Check agreement
-        if original_direction == math_direction and original_direction != "HOLD":
+        if bitnode_direction == math_direction and bitnode_direction != "HOLD":
             signals_agree = True
             confirmation = "✅ CONFIRMED"
             signal_class = "confirmed-signal"
-        elif original_direction == "HOLD" and math_direction != "HOLD":
+        elif bitnode_direction == "HOLD" and math_direction != "HOLD":
             confirmation = "⚠️ MATH ONLY"
             signal_class = "warning-signal"
             signals_agree = False
-        elif math_direction == "HOLD" and original_direction != "HOLD":
-            confirmation = "⚠️ ORIGINAL ONLY"
+        elif math_direction == "HOLD" and bitnode_direction != "HOLD":
+            confirmation = "⚠️ BITNODE ONLY"
             signal_class = "warning-signal"
             signals_agree = False
         else:
@@ -905,7 +718,7 @@ class HybridConfirmationSystem:
         return {
             'symbol': symbol.replace("/", ""),
             'display_symbol': symbol,
-            'original_direction': original_direction,
+            'bitnode_direction': bitnode_direction,
             'math_direction': math_direction,
             'confirmation': confirmation,
             'signals_agree': signals_agree,
@@ -921,16 +734,15 @@ class HybridConfirmationSystem:
                 'phi': math_signal['phi'],
                 'sigma': math_signal['sigma']
             },
-            'original_details': {
-                'ema_signal': ema_signal['signal'],
-                'ema_strength': ema_signal['strength'],
+            'bitnode_details': {
                 'tor_signal': tor_signal['signal'],
-                'tor_bias': tor_signal['bias']
+                'tor_bias': tor_signal['bias'],
+                'tor_change': tor_signal['tor_change']
             }
         }
     
     def scan_all_pairs(self):
-        """Scan all 20 trading pairs"""
+        """Scan all 11 specific trading pairs"""
         all_signals = []
         
         for pair in self.trading_pairs:
@@ -942,73 +754,94 @@ class HybridConfirmationSystem:
         # Sort by signal strength
         all_signals.sort(key=lambda x: x['strength_pct'], reverse=True)
         
-        # Only take top 5 signals
-        return all_signals[:5]
+        # Only take confirmed signals (where both agree)
+        confirmed_signals = [s for s in all_signals if s['signals_agree']]
+        return confirmed_signals
+
+# Simple authentication system
+def check_credentials(username, password):
+    """Check if username and password are correct"""
+    valid_users = {
+        "godziller": "dragonfire2025",
+        "admin": "cryptoking",
+        "trader": "bullmarket"
+    }
+    return username in valid_users and valid_users[username] == password
+
+def login_page():
+    """Display login page - SIMPLIFIED VERSION"""
+    st.markdown("""
+    <style>
+    .main .block-container {
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col2:
+        st.markdown("""
+        <div style='
+            background: rgba(20, 0, 0, 0.95);
+            border: 2px solid rgba(255, 0, 0, 0.6);
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 0 50px rgba(255, 0, 0, 0.5);
+            text-align: center;
+            margin: 2rem 0;
+        '>
+            <h1 style='
+                background: linear-gradient(90deg, #ff0000 0%, #ff4444 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                font-family: Orbitron, monospace;
+                font-weight: 900;
+                font-size: 2.5rem;
+                margin-bottom: 1rem;
+                text-shadow: 0 0 20px rgba(255, 0, 0, 0.7);
+            '>🐲 GODZILLERS</h1>
+            <p style='
+                color: #ff6666;
+                font-family: Orbitron, monospace;
+                font-size: 1rem;
+                margin-bottom: 2rem;
+                letter-spacing: 2px;
+            '>BITNODE + MATHEMATICAL HYBRID CONFIRMATION</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        with st.form("login_form"):
+            username = st.text_input("👤 DRAGON NAME", placeholder="Enter your dragon name...")
+            password = st.text_input("🔐 FIRE BREATH", type="password", placeholder="Enter your fire breath...")
+            
+            login_button = st.form_submit_button("🔥 IGNITE DRAGON FIRE", use_container_width=True)
+            
+            if login_button:
+                if check_credentials(username, password):
+                    st.session_state.logged_in = True
+                    st.session_state.username = username
+                    st.success("✅ Dragon fire ignited! Access granted.")
+                    st.rerun()
+                else:
+                    st.error("❌ Invalid dragon name or fire breath!")
 
 # ==================== MAIN APP ====================
-def get_crypto_prices():
-    """Get crypto prices from multiple sources with fallback"""
-    coins = {
-        'BTCUSDT': 'bitcoin',
-        'ETHUSDT': 'ethereum',
-        'BNBUSDT': 'binancecoin',
-        'SOLUSDT': 'solana',
-        'XRPUSDT': 'ripple',
-        'ADAUSDT': 'cardano',
-        'DOGEUSDT': 'dogecoin',
-        'AVAXUSDT': 'avalanche-2',
-        'LINKUSDT': 'chainlink',
-        'DOTUSDT': 'polkadot'
-    }
-    
-    prices = {}
-    
-    try:
-        for symbol in coins.keys():
-            try:
-                response = requests.get(f"https://api.binance.com/api/v3/ticker/price?symbol={symbol}", timeout=5)
-                if response.status_code == 200:
-                    data = response.json()
-                    prices[symbol] = float(data['price'])
-                else:
-                    prices[symbol] = None
-            except Exception as e:
-                prices[symbol] = None
-        
-        missing_coins = [coin_id for symbol, coin_id in coins.items() if prices.get(symbol) is None]
-        if missing_coins:
-            try:
-                coin_ids = ','.join(missing_coins)
-                response = requests.get(f"https://api.coingecko.com/api/v3/simple/price?ids={coin_ids}&vs_currencies=usd", timeout=5)
-                if response.status_code == 200:
-                    gecko_data = response.json()
-                    for symbol, coin_id in coins.items():
-                        if prices.get(symbol) is None and coin_id in gecko_data:
-                            prices[symbol] = float(gecko_data[coin_id]['usd'])
-            except Exception as e:
-                for symbol in coins:
-                    if prices.get(symbol) is None:
-                        prices[symbol] = 0.0
-                
-    except Exception as e:
-        for symbol in coins:
-            prices[symbol] = 0.0
-    
-    return prices
-
 def get_coin_display_name(symbol):
     """Get display name for crypto symbols"""
     names = {
         'BTCUSDT': 'Bitcoin',
         'ETHUSDT': 'Ethereum',
-        'BNBUSDT': 'Binance Coin',
+        'SUIUSDT': 'Sui',
+        'LINKUSDT': 'Chainlink',
         'SOLUSDT': 'Solana',
         'XRPUSDT': 'Ripple',
+        'TAOUSDT': 'Bittensor',
+        'ENAUSDT': 'Ethena',
         'ADAUSDT': 'Cardano',
         'DOGEUSDT': 'Dogecoin',
-        'AVAXUSDT': 'Avalanche',
-        'LINKUSDT': 'Chainlink',
-        'DOTUSDT': 'Polkadot'
+        'BRETTUSDT': 'Brett'
     }
     return names.get(symbol, symbol)
 
@@ -1017,14 +850,15 @@ def get_coin_emoji(symbol):
     emojis = {
         'BTCUSDT': '🐲',
         'ETHUSDT': '🔥',
-        'BNBUSDT': '💰',
+        'SUIUSDT': '💧',
+        'LINKUSDT': '🔗',
         'SOLUSDT': '☀️',
         'XRPUSDT': '✖️',
+        'TAOUSDT': '🧠',
+        'ENAUSDT': '⚡',
         'ADAUSDT': '🔷',
         'DOGEUSDT': '🐕',
-        'AVAXUSDT': '❄️',
-        'LINKUSDT': '🔗',
-        'DOTUSDT': '⚫'
+        'BRETTUSDT': '🤖'
     }
     return emojis.get(symbol, '💀')
 
@@ -1048,8 +882,8 @@ def main_app():
     st.markdown(f'<p style="text-align: right; color: #ff4444; font-family: Orbitron; margin: 0.5rem 1rem;">Welcome, {st.session_state.username}!</p>', unsafe_allow_html=True)
     
     # GODZILLERS Header
-    st.markdown('<h1 class="godzillers-header">🔥 GODZILLERS MATHEMATICAL HYBRID</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="godzillers-subheader">ORIGINAL BOT + 8 MATHEMATICAL EQUATIONS CONFIRMATION</p>', unsafe_allow_html=True)
+    st.markdown('<h1 class="godzillers-header">🔥 GODZILLERS HYBRID CONFIRMATION</h1>', unsafe_allow_html=True)
+    st.markdown('<p class="godzillers-subheader">BITNODE BOT + 8 MATHEMATICAL EQUATIONS CONFIRMATION</p>', unsafe_allow_html=True)
     
     # Update data button
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
@@ -1057,104 +891,103 @@ def main_app():
     with col1:
         st.markdown('<h2 class="section-header">🧮 HYBRID SIGNAL CONFIRMATION</h2>', unsafe_allow_html=True)
     with col2:
-        if st.button("🐉 SCAN 20 PAIRS", key="scan_hybrid", use_container_width=True, type="primary"):
+        if st.button("🐉 SCAN 11 COINS", key="scan_hybrid", use_container_width=True, type="primary"):
             with st.spinner("🔥 Activating hybrid analysis..."):
                 # Update Bitnodes data
                 st.session_state.hybrid_system.original_analyzer.update_node_data()
                 # Scan all pairs
                 st.session_state.signals = st.session_state.hybrid_system.scan_all_pairs()
                 st.session_state.last_scan = datetime.now()
-                st.success("✅ Hybrid scan completed!")
+                if st.session_state.signals:
+                    st.success(f"✅ Found {len(st.session_state.signals)} confirmed signals!")
+                else:
+                    st.warning("⚠️ No confirmed signals (both systems must agree)")
     
-    # Last scan time
+    # Last scan time and Bitnode status
     if st.session_state.last_scan:
         scan_time = st.session_state.last_scan.strftime("%H:%M:%S")
-        st.markdown(f'<p style="color: #ff6666; text-align: center;">Last scan: {scan_time} | 20 pairs analyzed</p>', unsafe_allow_html=True)
+        tor_signal = st.session_state.hybrid_system.original_analyzer.calculate_tor_signal()
+        tor_change = tor_signal['tor_change']
+        tor_signal_text = tor_signal['signal']
+        
+        st.markdown(f'''
+        <div style="background: rgba(30, 0, 0, 0.7); border: 1px solid rgba(255, 0, 0, 0.3); 
+                 border-radius: 10px; padding: 1rem; text-align: center; margin: 0.5rem 0;">
+            <p style="color: #ff6666; font-family: Orbitron; margin: 0.2rem 0; font-size: 0.9rem;">
+                Last scan: {scan_time} | 11 coins analyzed
+            </p>
+            <p style="color: #ff9900; font-family: Orbitron; margin: 0.2rem 0; font-size: 0.9rem;">
+                Bitnode Signal: {tor_signal_text} | Tor Change: {tor_change:.2f}%
+            </p>
+        </div>
+        ''', unsafe_allow_html=True)
     
     # Display hybrid signals
     if st.session_state.signals:
-        # Display confirmed signals first
-        confirmed_signals = [s for s in st.session_state.signals if s['signals_agree']]
-        other_signals = [s for s in st.session_state.signals if not s['signals_agree']]
+        st.markdown('<h3 style="font-family: Orbitron; color: #00ff00; margin: 1rem 0;">✅ CONFIRMED SIGNALS (BOTH SYSTEMS AGREE)</h3>', unsafe_allow_html=True)
         
-        if confirmed_signals:
-            st.markdown('<h3 style="font-family: Orbitron; color: #00ff00; margin: 1rem 0;">✅ CONFIRMED SIGNALS (BOTH SYSTEMS AGREE)</h3>', unsafe_allow_html=True)
+        for signal in st.session_state.signals:
+            display_name = get_coin_display_name(signal['symbol'])
+            emoji = get_coin_emoji(signal['symbol'])
             
-            for signal in confirmed_signals:
-                display_name = get_coin_display_name(signal['symbol'])
-                emoji = get_coin_emoji(signal['symbol'])
-                
-                st.markdown(f'''
-                <div class="{signal['signal_class']}">
-                    <div style="text-align: center;">
-                        <h3 style="font-family: Orbitron; margin: 0.5rem 0; font-size: 1.5rem;">{emoji} {display_name} ({signal['symbol']})</h3>
-                        <p style="font-family: Orbitron; font-size: 2rem; font-weight: 700; margin: 0.5rem 0; color: #00ff00;">{signal['math_direction']} {signal['math_direction']}</p>
-                        <p style="color: #ffd700; font-family: Orbitron; font-size: 1.3rem; margin: 0.5rem 0;">STRENGTH: {signal['strength_pct']}%</p>
-                        <p style="color: #ff9900; font-family: Orbitron; font-size: 1.2rem; margin: 0.5rem 0;">LEVERAGE: {signal['leverage']}</p>
-                        <p style="color: #ffffff; font-family: Orbitron; font-size: 1rem; margin: 0.5rem 0;">PRICE: ${signal['price']:,.2f}</p>
-                    </div>
-                    
-                    <div style="text-align: center; margin: 1rem 0;">
-                        <span class="confirmation-badge">✓ BOTH SYSTEMS CONFIRM</span>
-                        <span class="math-badge">MATH: {signal['math_direction']}</span>
-                        <span class="leverage-badge">{signal['leverage']}</span>
-                    </div>
-                    
-                    <div style="color: #aaa; font-size: 0.8rem; text-align: center; margin-top: 1rem;">
-                        I={signal['math_details']['imbalance']:.3f} | φ={signal['math_details']['phi']:.6f} | σ={signal['math_details']['sigma']:.4f}
-                    </div>
+            st.markdown(f'''
+            <div class="{signal['signal_class']}">
+                <div style="text-align: center;">
+                    <h3 style="font-family: Orbitron; margin: 0.5rem 0; font-size: 1.5rem;">{emoji} {display_name} ({signal['symbol']})</h3>
+                    <p style="font-family: Orbitron; font-size: 2rem; font-weight: 700; margin: 0.5rem 0; color: #00ff00;">{signal['math_direction']} {signal['math_direction']}</p>
+                    <p style="color: #ffd700; font-family: Orbitron; font-size: 1.3rem; margin: 0.5rem 0;">STRENGTH: {signal['strength_pct']}%</p>
+                    <p style="color: #ff9900; font-family: Orbitron; font-size: 1.2rem; margin: 0.5rem 0;">LEVERAGE: {signal['leverage']}</p>
+                    <p style="color: #ffffff; font-family: Orbitron; font-size: 1rem; margin: 0.5rem 0;">PRICE: ${signal['price']:,.2f}</p>
                 </div>
-                ''', unsafe_allow_html=True)
-        
-        if other_signals:
-            st.markdown('<h3 style="font-family: Orbitron; color: #ff9900; margin: 1rem 0;">⚠️ OTHER SIGNALS (NO AGREEMENT)</h3>', unsafe_allow_html=True)
-            
-            for signal in other_signals:
-                display_name = get_coin_display_name(signal['symbol'])
-                emoji = get_coin_emoji(signal['symbol'])
                 
-                st.markdown(f'''
-                <div class="{signal['signal_class']}">
-                    <div style="text-align: center;">
-                        <h4 style="font-family: Orbitron; margin: 0.5rem 0; font-size: 1.2rem;">{emoji} {display_name}</h4>
-                        <p style="font-family: Orbitron; font-size: 1.5rem; font-weight: 700; margin: 0.5rem 0;">{signal['confirmation']}</p>
-                        <p style="color: #ffd700; font-family: Orbitron; font-size: 1.1rem; margin: 0.5rem 0;">MATH: {signal['math_direction']} ({signal['strength_pct']}%)</p>
-                        <p style="color: #ff6666; font-family: Orbitron; font-size: 1rem; margin: 0.5rem 0;">ORIGINAL: {signal['original_direction']}</p>
-                        <p style="color: #ff9900; font-family: Orbitron; font-size: 1rem; margin: 0.5rem 0;">LEVERAGE: {signal['leverage']}</p>
-                    </div>
-                    
-                    <div style="text-align: center; margin: 0.5rem 0;">
-                        <span class="warning-badge">{signal['confirmation']}</span>
-                        <span class="math-badge">MATH: {signal['math_direction']}</span>
-                        <span class="leverage-badge">{signal['leverage']}</span>
-                    </div>
+                <div style="text-align: center; margin: 1rem 0;">
+                    <span class="confirmation-badge">✓ BOTH SYSTEMS CONFIRM</span>
+                    <span class="math-badge">MATH: {signal['math_direction']}</span>
+                    <span class="leverage-badge">{signal['leverage']}</span>
                 </div>
-                ''', unsafe_allow_html=True)
+                
+                <div style="color: #aaa; font-size: 0.8rem; text-align: center; margin-top: 1rem;">
+                    Bitnode: {signal['bitnode_details']['tor_signal']} | 
+                    Math Signal: {signal['math_details']['signal_raw']:.3f} | 
+                    I={signal['math_details']['imbalance']:.3f}
+                </div>
+            </div>
+            ''', unsafe_allow_html=True)
     else:
-        st.info("🔥 Click 'SCAN 20 PAIRS' to get hybrid confirmation signals")
+        if st.session_state.last_scan:
+            st.markdown('<div class="signal-neutral"><p style="text-align: center; color: #ff9900; font-family: Orbitron;">⚠️ No confirmed signals found. Both Bitnode and Mathematical systems must agree.</p></div>', unsafe_allow_html=True)
+        else:
+            st.info("🔥 Click 'SCAN 11 COINS' to get hybrid confirmation signals")
     
-    # Live prices section
+    # Coins being monitored
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-    st.markdown('<h2 class="section-header">💰 LIVE PRICES</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-header">📊 COINS BEING MONITORED</h2>', unsafe_allow_html=True)
     
-    prices = get_crypto_prices()
-    if prices:
-        # Create columns for price grid
-        cols = st.columns(5)
-        
-        for idx, (symbol, price) in enumerate(prices.items()):
-            if price and price > 0:
-                with cols[idx % 5]:
-                    display_name = get_coin_display_name(symbol)
-                    emoji = get_coin_emoji(symbol)
-                    
-                    st.markdown(f'''
-                    <div style="background: rgba(30, 0, 0, 0.7); border: 1px solid rgba(255, 0, 0, 0.3); border-radius: 10px; padding: 1rem; text-align: center;">
-                        <p style="font-family: Orbitron; color: #ff4444; margin: 0.2rem 0; font-size: 1rem;">{emoji} {display_name}</p>
-                        <p style="font-family: Orbitron; font-size: 1.2rem; font-weight: 700; color: #ffffff; margin: 0.2rem 0;">${price:,.2f}</p>
-                        <p style="color: #ff8888; font-size: 0.8rem; margin: 0;">{symbol}</p>
-                    </div>
-                    ''', unsafe_allow_html=True)
+    coins_list = [
+        ("BTC", "Bitcoin", "🐲"),
+        ("ETH", "Ethereum", "🔥"),
+        ("SUI", "Sui", "💧"),
+        ("LINK", "Chainlink", "🔗"),
+        ("SOL", "Solana", "☀️"),
+        ("XRP", "Ripple", "✖️"),
+        ("TAO", "Bittensor", "🧠"),
+        ("ENA", "Ethena", "⚡"),
+        ("ADA", "Cardano", "🔷"),
+        ("DOGE", "Dogecoin", "🐕"),
+        ("BRETT", "Brett", "🤖")
+    ]
+    
+    # Display coins in a grid
+    cols = st.columns(4)
+    for idx, (symbol, name, emoji) in enumerate(coins_list):
+        with cols[idx % 4]:
+            st.markdown(f'''
+            <div style="background: rgba(30, 0, 0, 0.7); border: 1px solid rgba(255, 0, 0, 0.3); 
+                     border-radius: 10px; padding: 1rem; text-align: center; margin-bottom: 0.5rem;">
+                <p style="font-family: Orbitron; color: #ff4444; margin: 0.2rem 0; font-size: 1.2rem;">{emoji} {name}</p>
+                <p style="color: #ff8888; font-size: 0.9rem; margin: 0;">{symbol}/USDT</p>
+            </div>
+            ''', unsafe_allow_html=True)
     
     # Mathematical equations info
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
@@ -1174,9 +1007,9 @@ def main_app():
             8. L_max = 1 + L₀/σ̂_t (display only)
         </p>
         <p style="color: #ff9900; font-size: 0.9rem; margin-top: 1rem;">
-            ⚡ Signals shown only when both systems agree<br>
+            ⚡ Signals shown only when both Bitnode and Math agree<br>
             ⚡ Leverage: LOW LEVERAGE or MAX LEVERAGE only<br>
-            ⚡ No specific leverage numbers suggested
+            ⚡ 11 specific coins monitored
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -1185,9 +1018,9 @@ def main_app():
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
     st.markdown("""
     <div style="text-align: center; color: #ff6666; padding: 2rem 1rem;">
-        <p style="font-family: Orbitron; font-size: 1rem;">🔥 GODZILLERS MATHEMATICAL HYBRID CONFIRMATION 🔥</p>
-        <p style="color: #aaa; font-size: 0.8rem;">Original Bot + 8 Mathematical Equations | 20 Trading Pairs</p>
-        <p style="color: #666; font-size: 0.7rem;">Signals shown only when both systems agree | Leverage: LOW or MAX only</p>
+        <p style="font-family: Orbitron; font-size: 1rem;">🔥 GODZILLERS HYBRID CONFIRMATION BOT 🔥</p>
+        <p style="color: #aaa; font-size: 0.8rem;">Bitnode Analysis + 8 Mathematical Equations | 11 Specific Coins</p>
+        <p style="color: #666; font-size: 0.7rem;">BTC • ETH • SUI • LINK • SOL • XRP • TAO • ENA • ADA • DOGE • BRETT</p>
     </div>
     """, unsafe_allow_html=True)
 
