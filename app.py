@@ -5,20 +5,21 @@ import requests
 from math import floor
 
 # ------------------------------
-# CONFIG
+# THEME & STYLE (from repo)
 # ------------------------------
 st.set_page_config(page_title="Godzilla Trading Signals", page_icon="🦖", layout="wide")
 st.markdown("""
 <style>
 body { background-color: #0a0a0a; color: white; }
-.stButton>button { background-color: #e60000; color: white; }
+.stButton>button { background-color: #e60000; color: white; font-weight: bold; }
 .stTextInput>div>div>input { background-color: #1a1a1a; color: white; }
-h1, h2, h3, h4 { color: #e60000; }
+h1, h2, h3, h4 { color: #e60000; font-weight: bold; }
+.dataframe, .stDataFrame { color: white !important; background-color: #1a1a1a !important; }
 </style>
 """, unsafe_allow_html=True)
 
 # ------------------------------
-# LOGIN
+# LOGIN (from repo)
 # ------------------------------
 def login():
     st.sidebar.title("Godzilla Trading Login")
@@ -29,6 +30,7 @@ def login():
             st.session_state.logged_in = True
         else:
             st.sidebar.error("Invalid credentials")
+
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if not st.session_state.logged_in:
@@ -50,7 +52,29 @@ binance_klines_api = "https://api.binance.com/api/v3/klines?symbol={}&interval=1
 bitnodes_api = "https://bitnodes.io/api/v1/snapshots/latest/"
 
 # ------------------------------
-# HELPER FUNCTIONS
+# BITNODE ANALYZER FUNCTIONS (from repo)
+# ------------------------------
+def fetch_bitnodes_signal():
+    try:
+        resp = requests.get(bitnodes_api).json()
+        total_nodes = resp['total_nodes']
+        tor_nodes = [n for n in resp['nodes'] if 'tor' in n]
+        tor_percentage = (len(tor_nodes)/total_nodes)*100 if total_nodes!=0 else 0
+        previous_tor = tor_percentage - 1.5
+        change = tor_percentage - previous_tor
+        # Signal classification
+        if change >= 1.0: return "🐲 GODZILLA DUMP", 100
+        elif 0.5 <= change <1.0: return "🔥 STRONG SELL", 85
+        elif 0.1 <= change <0.5: return "SELL", 70
+        elif change <= -1.0: return "🐲 GODZILLA PUMP", 100
+        elif -0.5 <= change < -0.1: return "🚀 STRONG BUY", 85
+        elif -1.0 < change < -0.5: return "BUY", 70
+        else: return "HOLD", 50
+    except:
+        return "HOLD", 50
+
+# ------------------------------
+# MATHEMATICAL FORMULAS
 # ------------------------------
 def fetch_orderbook(pair):
     try:
@@ -67,14 +91,6 @@ def fetch_mid_price(bid, ask):
 def calculate_volatility(prices):
     returns = np.log(np.array(prices[1:]) / np.array(prices[:-1]))
     return np.std(returns) if len(returns) > 1 else 0.001
-
-def fetch_historical_prices(pair):
-    try:
-        resp = requests.get(binance_klines_api.format(pair)).json()
-        closes = [float(candle[4]) for candle in resp]
-        return closes
-    except:
-        return [1]*20
 
 def order_book_signal(bids, asks):
     top_bid_price, top_bid_qty = bids[0] if bids else (0,0)
@@ -103,24 +119,9 @@ def order_book_signal(bids, asks):
     
     return round(Signal_t,2), Confidence, Direction, Strength, mid
 
-def fetch_bitnodes_signal():
-    try:
-        resp = requests.get(bitnodes_api).json()
-        total_nodes = resp['total_nodes']
-        tor_nodes = [n for n in resp['nodes'] if 'tor' in n]
-        tor_percentage = (len(tor_nodes)/total_nodes)*100 if total_nodes!=0 else 0
-        previous_tor = tor_percentage - 1.5
-        change = tor_percentage - previous_tor
-        if change >= 1.0: return "🐲 GODZILLA DUMP", 100
-        elif 0.5 <= change <1.0: return "🔥 STRONG SELL", 85
-        elif 0.1 <= change <0.5: return "SELL", 70
-        elif change <= -1.0: return "🐲 GODZILLA PUMP", 100
-        elif -0.5 <= change < -0.1: return "🚀 STRONG BUY", 85
-        elif -1.0 < change < -0.5: return "BUY", 70
-        else: return "HOLD", 50
-    except:
-        return "HOLD", 50
-
+# ------------------------------
+# HYBRID SIGNAL + LEVERAGE
+# ------------------------------
 def hybrid_signal(math_dir, math_conf, bitnode_dir, bitnode_conf):
     if (math_dir=="BUY" and bitnode_dir in ["🚀 STRONG BUY","BUY","🐲 GODZILLA PUMP"]):
         Combined = "CONFIRMED BUY"
@@ -132,10 +133,7 @@ def hybrid_signal(math_dir, math_conf, bitnode_dir, bitnode_conf):
     return Combined, round(Combined_Confidence,2)
 
 def leverage_classification(combined_confidence):
-    if combined_confidence >= 90:
-        return "MAX LEVERAGE"
-    else:
-        return "LOW LEVERAGE"
+    return "MAX LEVERAGE" if combined_confidence >= 90 else "LOW LEVERAGE"
 
 # ------------------------------
 # MAIN APP
@@ -159,7 +157,6 @@ if st.button("Update Signals"):
     df = pd.DataFrame(all_data, columns=["Pair","Bid","Ask","Mid","Signal_Strength","Confidence",
                                          "Direction","Strength","Hybrid_Signal","Hybrid_Confidence","Leverage"])
     
-    # Top 2 strongest signals
     top_signals = df.sort_values(by="Signal_Strength", ascending=False).head(2)
     
     st.subheader("📊 All 20 Pairs Signals")
