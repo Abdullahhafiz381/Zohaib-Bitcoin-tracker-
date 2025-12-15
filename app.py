@@ -5,7 +5,7 @@ import requests
 from math import floor
 
 # ------------------------------
-# THEME & STYLE (from repo)
+# THEME & STYLE FROM REPO
 # ------------------------------
 st.set_page_config(page_title="Godzilla Trading Signals", page_icon="🦖", layout="wide")
 st.markdown("""
@@ -19,7 +19,7 @@ h1, h2, h3, h4 { color: #e60000; font-weight: bold; }
 """, unsafe_allow_html=True)
 
 # ------------------------------
-# LOGIN (from repo)
+# LOGIN FROM REPO
 # ------------------------------
 def login():
     st.sidebar.title("Godzilla Trading Login")
@@ -62,7 +62,6 @@ def fetch_bitnodes_signal():
         tor_percentage = (len(tor_nodes)/total_nodes)*100 if total_nodes!=0 else 0
         previous_tor = tor_percentage - 1.5
         change = tor_percentage - previous_tor
-        # Signal classification
         if change >= 1.0: return "🐲 GODZILLA DUMP", 100
         elif 0.5 <= change <1.0: return "🔥 STRONG SELL", 85
         elif 0.1 <= change <0.5: return "SELL", 70
@@ -105,16 +104,12 @@ def order_book_signal(bids, asks):
     sigma = calculate_volatility(prices)
     Signal_t = np.sign(I_t) * (abs(I_t) / (phi_t * sigma)) if sigma !=0 else 0
 
-    # Confidence formula
     if abs(Signal_t) <1.0:
         Confidence = 70 + floor((abs(Signal_t)-0.5)*30)
     else:
         Confidence = 85 + min(14, floor((abs(Signal_t)-1.0)*10))
     
-    # Direction
     Direction = "BUY" if I_t > phi_t else "SELL" if I_t < -phi_t else "HOLD"
-    
-    # Strength classification
     Strength = "STRONG" if abs(I_t)>0.3 else "MODERATE" if abs(I_t)>0.1 else "WEAK"
     
     return round(Signal_t,2), Confidence, Direction, Strength, mid
