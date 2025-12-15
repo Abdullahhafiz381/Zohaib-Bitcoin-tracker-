@@ -1,173 +1,112 @@
-# app.py - GODZILLERS MATHEMATICAL SIGNALS - CLEAN VERSION
+# app.py - GODZILLERS MATHEMATICAL SIGNALS - COMPACT & CLEAN
 import streamlit as st
 import requests
-import pandas as pd
 import json
 import os
-from datetime import datetime, timedelta
-import plotly.graph_objects as go
-import plotly.express as px
+from datetime import datetime
 import numpy as np
 import time
 import ccxt
 
-# GODZILLERS Streamlit setup
+# ==================== STREAMLIT SETUP ====================
 st.set_page_config(
-    page_title="🔥 GODZILLERS MATHEMATICAL SIGNALS",
+    page_title="🔥 GODZILLERS",
     page_icon="🐲",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# GODZILLERS CSS - Clean Premium Design
+# ==================== COMPACT CSS ====================
 st.markdown("""
 <style>
+    /* BASE STYLES */
     .main {
         background: linear-gradient(135deg, #000000 0%, #0a000a 50%, #00001a 100%);
-        color: #ffffff;
         font-family: 'Rajdhani', sans-serif;
     }
     
-    .stApp {
-        background: linear-gradient(135deg, #000000 0%, #0a000a 50%, #00001a 100%);
-    }
-    
-    .godzillers-header {
+    /* HEADER */
+    .app-header {
         background: linear-gradient(90deg, #ff00ff 0%, #00ffff 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         font-family: 'Orbitron', monospace;
         font-weight: 900;
         text-align: center;
-        font-size: 3.5rem;
+        font-size: 3rem;
         margin-bottom: 0.5rem;
-        text-shadow: 0 0 30px rgba(255, 0, 255, 0.7);
-        letter-spacing: 3px;
+        text-shadow: 0 0 20px rgba(255, 0, 255, 0.5);
     }
     
-    .godzillers-subheader {
+    .app-subheader {
         color: #ff66ff;
         font-family: 'Orbitron', monospace;
         text-align: center;
-        font-size: 1.2rem;
+        font-size: 1rem;
         margin-bottom: 2rem;
-        letter-spacing: 2px;
+        letter-spacing: 1px;
+    }
+    
+    /* COMPACT SIGNAL CARDS */
+    .signal-card {
+        background: rgba(20, 0, 40, 0.7);
+        border-radius: 15px;
+        padding: 1.2rem;
+        margin: 0.8rem 0;
+        border: 2px solid;
+        transition: all 0.3s ease;
+    }
+    
+    .signal-buy {
+        border-color: #00ff00;
+        box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+    }
+    
+    .signal-sell {
+        border-color: #ff0000;
+        box-shadow: 0 0 20px rgba(255, 0, 0, 0.3);
+    }
+    
+    /* COMPACT BADGES */
+    .badge {
+        font-family: 'Orbitron', monospace;
+        font-weight: 700;
+        padding: 0.25rem 0.6rem;
+        border-radius: 10px;
+        font-size: 0.7rem;
         text-transform: uppercase;
+        letter-spacing: 0.5px;
+        display: inline-block;
     }
     
-    /* CLEAN SIGNAL CARDS */
-    .clean-buy-signal {
-        background: linear-gradient(135deg, 
-            rgba(0, 255, 0, 0.05) 0%, 
-            rgba(0, 150, 0, 0.15) 100%);
-        border: 3px solid #00ff00;
-        border-radius: 20px;
-        padding: 2rem;
-        margin: 1.5rem 0;
-        box-shadow: 0 0 40px rgba(0, 255, 0, 0.3),
-                    inset 0 0 20px rgba(0, 255, 0, 0.05);
-        position: relative;
-        overflow: hidden;
-        transition: all 0.3s ease;
-    }
-    
-    .clean-buy-signal:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 0 50px rgba(0, 255, 0, 0.4),
-                    inset 0 0 30px rgba(0, 255, 0, 0.1);
-    }
-    
-    .clean-sell-signal {
-        background: linear-gradient(135deg, 
-            rgba(255, 0, 0, 0.05) 0%, 
-            rgba(150, 0, 0, 0.15) 100%);
-        border: 3px solid #ff0000;
-        border-radius: 20px;
-        padding: 2rem;
-        margin: 1.5rem 0;
-        box-shadow: 0 0 40px rgba(255, 0, 0, 0.3),
-                    inset 0 0 20px rgba(255, 0, 0, 0.05);
-        position: relative;
-        overflow: hidden;
-        transition: all 0.3s ease;
-    }
-    
-    .clean-sell-signal:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 0 50px rgba(255, 0, 0, 0.4),
-                    inset 0 0 30px rgba(255, 0, 0, 0.1);
-    }
-    
-    /* CONFIDENCE BADGES */
-    .clean-confidence-95 {
+    .badge-confidence-95 {
         background: linear-gradient(90deg, #00ff00, #00cc00);
         color: #000;
-        font-family: 'Orbitron', monospace;
-        font-weight: 900;
-        padding: 0.4rem 1.2rem;
-        border-radius: 20px;
-        font-size: 0.9rem;
-        margin: 0.2rem;
-        box-shadow: 0 0 15px rgba(0, 255, 0, 0.7);
-        text-transform: uppercase;
-        letter-spacing: 1px;
+        box-shadow: 0 0 8px rgba(0, 255, 0, 0.6);
     }
     
-    .clean-confidence-90 {
+    .badge-confidence-90 {
         background: linear-gradient(90deg, #99ff00, #66cc00);
         color: #000;
-        font-family: 'Orbitron', monospace;
-        font-weight: 900;
-        padding: 0.4rem 1.2rem;
-        border-radius: 20px;
-        font-size: 0.9rem;
-        margin: 0.2rem;
-        box-shadow: 0 0 15px rgba(153, 255, 0, 0.7);
-        text-transform: uppercase;
-        letter-spacing: 1px;
+        box-shadow: 0 0 8px rgba(153, 255, 0, 0.6);
     }
     
-    .clean-confidence-85 {
+    .badge-confidence-85 {
         background: linear-gradient(90deg, #ffff00, #cccc00);
         color: #000;
-        font-family: 'Orbitron', monospace;
-        font-weight: 900;
-        padding: 0.4rem 1.2rem;
-        border-radius: 20px;
-        font-size: 0.9rem;
-        margin: 0.2rem;
-        box-shadow: 0 0 15px rgba(255, 255, 0, 0.7);
-        text-transform: uppercase;
-        letter-spacing: 1px;
+        box-shadow: 0 0 8px rgba(255, 255, 0, 0.6);
     }
     
-    /* LEVERAGE BADGES */
-    .clean-leverage-max {
+    .badge-leverage-max {
         background: linear-gradient(90deg, #ff00ff, #cc00cc);
         color: #000;
-        font-family: 'Orbitron', monospace;
-        font-weight: 900;
-        padding: 0.4rem 1.2rem;
-        border-radius: 20px;
-        font-size: 0.9rem;
-        margin: 0.2rem;
-        box-shadow: 0 0 15px rgba(255, 0, 255, 0.7);
-        text-transform: uppercase;
-        letter-spacing: 1px;
+        box-shadow: 0 0 8px rgba(255, 0, 255, 0.6);
     }
     
-    .clean-leverage-low {
+    .badge-leverage-low {
         background: linear-gradient(90deg, #ff9900, #cc6600);
         color: #000;
-        font-family: 'Orbitron', monospace;
-        font-weight: 900;
-        padding: 0.4rem 1.2rem;
-        border-radius: 20px;
-        font-size: 0.9rem;
-        margin: 0.2rem;
-        box-shadow: 0 0 15px rgba(255, 153, 0, 0.7);
-        text-transform: uppercase;
-        letter-spacing: 1px;
+        box-shadow: 0 0 8px rgba(255, 153, 0, 0.6);
     }
     
     /* LOGIN STYLES */
@@ -176,19 +115,16 @@ st.markdown("""
         justify-content: center;
         align-items: center;
         min-height: 100vh;
-        background: linear-gradient(135deg, #000000 0%, #0a000a 50%, #00001a 100%);
-        padding: 20px;
     }
     
     .login-card {
-        background: rgba(10, 0, 20, 0.95);
-        backdrop-filter: blur(10px);
-        border: 2px solid rgba(255, 0, 255, 0.6);
+        background: rgba(10, 0, 20, 0.9);
+        border: 2px solid rgba(255, 0, 255, 0.5);
         border-radius: 20px;
         padding: 3rem;
         width: 100%;
-        max-width: 450px;
-        box-shadow: 0 0 50px rgba(255, 0, 255, 0.5);
+        max-width: 400px;
+        box-shadow: 0 0 40px rgba(255, 0, 255, 0.4);
         text-align: center;
     }
     
@@ -198,189 +134,117 @@ st.markdown("""
         -webkit-text-fill-color: transparent;
         font-family: 'Orbitron', monospace;
         font-weight: 900;
-        font-size: 2.5rem;
+        font-size: 2rem;
         margin-bottom: 1rem;
-        text-shadow: 0 0 20px rgba(255, 0, 255, 0.7);
-    }
-    
-    .login-subheader {
-        color: #ff66ff;
-        font-family: 'Orbitron', monospace;
-        font-size: 1rem;
-        margin-bottom: 2rem;
-        letter-spacing: 2px;
-    }
-    
-    .login-input {
-        background: rgba(0, 0, 0, 0.8);
-        border: 1px solid rgba(255, 0, 255, 0.5);
-        border-radius: 10px;
-        color: white;
-        font-family: 'Rajdhani', sans-serif;
-        padding: 0.75rem 1rem;
-        margin: 0.5rem 0;
-        width: 100%;
-        font-size: 1rem;
-    }
-    
-    .login-button {
-        background: linear-gradient(90deg, #ff00ff 0%, #00ffff 100%);
-        border: none;
-        border-radius: 25px;
-        color: #000000;
-        font-family: 'Orbitron', monospace;
-        font-weight: 900;
-        padding: 0.75rem 2rem;
-        margin: 1rem 0;
-        width: 100%;
-        transition: all 0.3s ease;
-        box-shadow: 0 0 20px rgba(255, 0, 255, 0.5);
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        font-size: 1.1rem;
     }
     
     .logout-button {
         background: linear-gradient(90deg, #ff00ff 0%, #00ffff 100%);
-        border: none;
-        border-radius: 10px;
-        color: #000000;
+        color: #000;
         font-family: 'Orbitron', monospace;
-        font-weight: 900;
-        padding: 0.5rem 1rem;
-        margin: 1rem;
-        transition: all 0.3s ease;
-        box-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        font-size: 0.8rem;
+        font-weight: 700;
+        padding: 0.4rem 0.8rem;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.7rem;
         position: fixed;
         top: 10px;
         right: 10px;
         z-index: 1000;
     }
     
+    /* SECTION HEADERS */
     .section-header {
         font-family: 'Orbitron', monospace;
-        font-size: 2rem;
-        background: linear-gradient(90deg, #ff00ff 0%, #00ffff 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin: 2rem 0 1rem 0;
-        text-shadow: 0 0 20px rgba(255, 0, 255, 0.5);
-        text-transform: uppercase;
-        letter-spacing: 2px;
+        font-size: 1.5rem;
+        color: #ff66ff;
+        margin: 1.5rem 0 1rem 0;
         text-align: center;
     }
     
-    .divider {
-        height: 2px;
-        background: linear-gradient(90deg, transparent 0%, #ff00ff 25%, #00ffff 75%, transparent 100%);
-        margin: 2.5rem 0;
-    }
-    
-    /* NO SIGNALS STYLE */
-    .no-signals {
-        background: rgba(20, 0, 40, 0.7);
-        border: 2px dashed rgba(255, 0, 255, 0.3);
-        border-radius: 15px;
-        padding: 3rem;
+    /* MONITORED COINS */
+    .coin-card {
+        background: rgba(30, 0, 60, 0.5);
+        border: 1px solid rgba(255, 0, 255, 0.3);
+        border-radius: 10px;
+        padding: 0.8rem;
         text-align: center;
-        margin: 2rem 0;
+        transition: transform 0.2s ease;
     }
     
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
+    .coin-card:hover {
+        transform: translateY(-2px);
+    }
     
     /* SCAN BUTTON */
-    .scan-button {
+    .stButton button {
         background: linear-gradient(90deg, #ff00ff 0%, #00ffff 100%) !important;
         color: #000 !important;
         font-family: 'Orbitron' !important;
-        font-weight: 900 !important;
+        font-weight: 700 !important;
         border: none !important;
-        border-radius: 15px !important;
-        padding: 0.75rem 2rem !important;
-        text-transform: uppercase !important;
-        letter-spacing: 1px !important;
-        font-size: 1rem !important;
-        transition: all 0.3s ease !important;
+        border-radius: 10px !important;
+        padding: 0.6rem 1.5rem !important;
+        font-size: 0.9rem !important;
     }
     
-    .scan-button:hover {
-        transform: scale(1.05) !important;
-        box-shadow: 0 0 30px rgba(255, 0, 255, 0.7) !important;
+    /* HIDE STREAMLIT ELEMENTS */
+    #MainMenu, footer, header {visibility: hidden;}
+    
+    /* NO SIGNALS */
+    .no-signals {
+        background: rgba(20, 0, 40, 0.5);
+        border: 2px dashed rgba(255, 0, 255, 0.3);
+        border-radius: 15px;
+        padding: 2rem;
+        text-align: center;
+        margin: 1rem 0;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# ==================== MATHEMATICAL EQUATIONS CLASS ====================
+# ==================== MATHEMATICAL EQUATIONS ====================
 class MathematicalEquations:
-    """Implementation of ALL 8 mathematical equations - ONLY HIGH CONFIDENCE"""
+    """8 mathematical equations for high-confidence signals"""
     
     def __init__(self):
-        # HIGH CONFIDENCE parameters
-        self.HIGH_CONFIDENCE_THRESHOLD = 85  # Only show signals >= 85%
-        self.ORDERBOOK_DEPTH = 15
-        self.VOLATILITY_WINDOW = 25
-        self.BASE_LEVERAGE = 6
+        self.CONFIDENCE_THRESHOLD = 85  # Only ≥85% signals
+        self.ORDERBOOK_DEPTH = 10
+        self.VOLATILITY_WINDOW = 20
         self.price_history = {}
         
-        # Initialize exchange for order book data
-        self.exchange = None
-        self.init_exchange()
-    
-    def init_exchange(self):
-        """Initialize exchange connection for order book data"""
+        # Initialize exchange
         try:
-            self.exchange = ccxt.binance({
-                'enableRateLimit': True,
-                'options': {'defaultType': 'future'}
-            })
+            self.exchange = ccxt.binance({'enableRateLimit': True})
             self.exchange.load_markets()
         except:
-            try:
-                self.exchange = ccxt.okx({
-                    'enableRateLimit': True,
-                    'options': {'defaultType': 'swap'}
-                })
-                self.exchange.load_markets()
-            except:
-                self.exchange = None
+            self.exchange = None
     
     def fetch_orderbook_data(self, symbol):
-        """Fetch order book data for mathematical equations"""
+        """Get order book data"""
         if not self.exchange:
             return None
         
         try:
-            # Try with the given symbol first
-            try:
-                orderbook = self.exchange.fetch_order_book(symbol, self.ORDERBOOK_DEPTH)
-                ticker = self.exchange.fetch_ticker(symbol)
-            except:
-                # Try with USDT pair
-                if not symbol.endswith('/USDT'):
-                    symbol_usdt = symbol + '/USDT'
-                    orderbook = self.exchange.fetch_order_book(symbol_usdt, self.ORDERBOOK_DEPTH)
-                    ticker = self.exchange.fetch_ticker(symbol_usdt)
-                else:
-                    return None
+            # Try with USDT pair
+            if not symbol.endswith('/USDT'):
+                symbol = symbol + '/USDT'
             
-            # Extract data for equations
-            bid = ticker['bid'] if ticker['bid'] else orderbook['bids'][0][0]
-            ask = ticker['ask'] if ticker['ask'] else orderbook['asks'][0][0]
+            orderbook = self.exchange.fetch_order_book(symbol, self.ORDERBOOK_DEPTH)
+            ticker = self.exchange.fetch_ticker(symbol)
+            
+            # Extract data
+            bid = ticker['bid'] or orderbook['bids'][0][0]
+            ask = ticker['ask'] or orderbook['asks'][0][0]
             mid_price = (bid + ask) / 2
             
-            # Calculate order book volumes (Equation 2)
+            # Order book volumes
             bids = orderbook['bids'][:self.ORDERBOOK_DEPTH]
             asks = orderbook['asks'][:self.ORDERBOOK_DEPTH]
-            
             bid_volume = sum(b[1] for b in bids)
             ask_volume = sum(a[1] for a in asks)
             
-            # Store price for volatility calculation
+            # Store price history
             if symbol not in self.price_history:
                 self.price_history[symbol] = []
             
@@ -397,46 +261,40 @@ class MathematicalEquations:
                 'spread': ask - bid,
                 'price_history': self.price_history[symbol]
             }
-        except Exception as e:
+        except:
             return None
     
     def calculate_volatility(self, price_history):
-        """Equation 6: σ̂_t = StdDev(returns)"""
+        """Calculate volatility from price history"""
         if len(price_history) < 2:
             return 0.01
         
         returns = np.diff(np.log(price_history))
         return float(np.std(returns, ddof=1))
     
-    def generate_high_confidence_signal(self, symbol):
-        """Generate HIGH CONFIDENCE signal using ALL 8 mathematical equations"""
+    def generate_signal(self, symbol):
+        """Generate high-confidence signal"""
         data = self.fetch_orderbook_data(symbol)
         
         if not data:
             return None
         
-        # Equation 1: Mid Price (already calculated)
+        # Equation 1: Mid Price
         P_t = data['mid_price']
         
-        # Equation 2: Order Book Volumes (already calculated)
+        # Equation 2: Order Book Volumes
         V_bid = data['bid_volume']
         V_ask = data['ask_volume']
         
         # Equation 3: Order Book Imbalance
         total_volume = V_bid + V_ask
-        if total_volume > 0:
-            I_t = (V_bid - V_ask) / total_volume
-        else:
-            I_t = 0
+        I_t = (V_bid - V_ask) / total_volume if total_volume > 0 else 0
         
         # Equation 4: Spread
         S_t = data['spread']
         
         # Equation 5: Relative Spread
-        if P_t > 0:
-            phi_t = S_t / P_t
-        else:
-            phi_t = 0.0001
+        phi_t = S_t / P_t if P_t > 0 else 0.0001
         
         # Equation 6: Volatility
         sigma_t = self.calculate_volatility(data['price_history'])
@@ -450,408 +308,290 @@ class MathematicalEquations:
         # Determine direction
         if I_t > phi_t:
             direction = "BUY"
-            action = "LONG"
         elif I_t < -phi_t:
             direction = "SELL"
-            action = "SHORT"
         else:
             return None
         
-        # Convert signal strength to percentage
+        # Calculate confidence percentage
         abs_signal = abs(signal_strength)
         if abs_signal < 1.0:
-            strength_pct = 70 + int((abs_signal - 0.5) * 30) if abs_signal > 0.5 else 0
+            confidence = 70 + int((abs_signal - 0.5) * 30) if abs_signal > 0.5 else 0
         else:
-            strength_pct = 85 + min(14, int((abs_signal - 1.0) * 10))
+            confidence = 85 + min(14, int((abs_signal - 1.0) * 10))
         
-        # ONLY RETURN HIGH CONFIDENCE SIGNALS (>= 85%)
-        if strength_pct < self.HIGH_CONFIDENCE_THRESHOLD:
+        # Only return high confidence signals
+        if confidence < self.CONFIDENCE_THRESHOLD:
             return None
         
-        # Equation 8: Max Leverage (for display only)
-        if sigma_t > 0:
-            max_leverage = 1 + (self.BASE_LEVERAGE / sigma_t)
-            max_leverage = min(10, max_leverage)
-        else:
-            max_leverage = 3
-        
-        # Determine leverage indication
-        if strength_pct >= 90:
-            leverage_indication = "MAX LEVERAGE"
-        else:
-            leverage_indication = "LOW LEVERAGE"
+        # Determine leverage
+        leverage = "MAX LEVERAGE" if confidence >= 90 else "LOW LEVERAGE"
         
         return {
             'direction': direction,
-            'action': action,
-            'strength_pct': strength_pct,
-            'leverage': leverage_indication,
-            'max_leverage_value': round(max_leverage, 1),
-            'price': round(P_t, 4)
+            'confidence': confidence,
+            'leverage': leverage,
+            'price': round(P_t, 2)
         }
 
-# ==================== MATHEMATICAL SIGNAL SYSTEM ====================
-class MathematicalSignalSystem:
-    """Pure mathematical system showing only HIGH CONFIDENCE signals"""
+# ==================== SIGNAL SYSTEM ====================
+class SignalSystem:
+    """System to scan and manage signals"""
     
     def __init__(self):
-        self.math_equations = MathematicalEquations()
-        # Your specific coins list
-        self.trading_pairs = [
-            "BTC/USDT", "ETH/USDT", "SUI/USDT", "LINK/USDT", "SOL/USDT",
-            "XRP/USDT", "TAO/USDT", "ENA/USDT", "ADA/USDT", "DOGE/USDT", "BRETT/USDT"
+        self.math_engine = MathematicalEquations()
+        self.coins = [
+            "BTC", "ETH", "SUI", "LINK", "SOL",
+            "XRP", "TAO", "ENA", "ADA", "DOGE", "BRETT"
         ]
     
-    def get_current_price(self, symbol):
-        """Get current price for a symbol"""
-        try:
-            # Remove slash for Binance API
-            binance_symbol = symbol.replace("/", "")
-            response = requests.get(f"https://api.binance.com/api/v3/ticker/price?symbol={binance_symbol}", timeout=5)
-            if response.status_code == 200:
-                data = response.json()
-                return float(data['price'])
-            else:
-                return None
-        except:
-            return None
-    
-    def scan_all_coins(self):
-        """Scan all 11 coins for HIGH CONFIDENCE mathematical signals"""
-        high_confidence_signals = []
+    def scan_coins(self):
+        """Scan all 11 coins for signals"""
+        signals = []
         
-        for pair in self.trading_pairs:
-            # Get mathematical signal
-            math_signal = self.math_equations.generate_high_confidence_signal(pair)
-            
-            if math_signal:
-                # Get current price
-                current_price = self.get_current_price(pair)
-                
-                signal_data = {
-                    'symbol': pair.replace("/", ""),
-                    'display_symbol': pair,
-                    'direction': math_signal['direction'],
-                    'strength_pct': math_signal['strength_pct'],
-                    'leverage': math_signal['leverage'],
-                    'max_leverage_value': math_signal['max_leverage_value'],
-                    'price': math_signal['price'],
-                    'current_price': current_price if current_price else math_signal['price'],
-                    'timestamp': datetime.now().isoformat()
-                }
-                high_confidence_signals.append(signal_data)
-            
-            time.sleep(0.1)  # Rate limiting
+        for coin in self.coins:
+            signal = self.math_engine.generate_signal(coin)
+            if signal:
+                signal['coin'] = coin
+                signals.append(signal)
+            time.sleep(0.05)  # Rate limiting
         
-        # Sort by signal strength (highest first)
-        high_confidence_signals.sort(key=lambda x: x['strength_pct'], reverse=True)
-        
-        return high_confidence_signals
+        # Sort by confidence (highest first)
+        signals.sort(key=lambda x: x['confidence'], reverse=True)
+        return signals
 
-# Simple authentication system
-def check_credentials(username, password):
-    """Check if username and password are correct"""
-    valid_users = {
+# ==================== COIN DATA ====================
+COIN_DATA = {
+    'BTC': {'name': 'Bitcoin', 'emoji': '🐲', 'color': '#FF9900'},
+    'ETH': {'name': 'Ethereum', 'emoji': '🔥', 'color': '#3C3C3D'},
+    'SUI': {'name': 'Sui', 'emoji': '💧', 'color': '#6FCF97'},
+    'LINK': {'name': 'Chainlink', 'emoji': '🔗', 'color': '#2A5ADA'},
+    'SOL': {'name': 'Solana', 'emoji': '☀️', 'color': '#00FFA3'},
+    'XRP': {'name': 'Ripple', 'emoji': '✖️', 'color': '#23292F'},
+    'TAO': {'name': 'Bittensor', 'emoji': '🧠', 'color': '#FF6B00'},
+    'ENA': {'name': 'Ethena', 'emoji': '⚡', 'color': '#3A86FF'},
+    'ADA': {'name': 'Cardano', 'emoji': '🔷', 'color': '#0033AD'},
+    'DOGE': {'name': 'Dogecoin', 'emoji': '🐕', 'color': '#C2A633'},
+    'BRETT': {'name': 'Brett', 'emoji': '🤖', 'color': '#FF6B6B'}
+}
+
+def get_confidence_class(confidence):
+    """Get CSS class for confidence badge"""
+    if confidence >= 95:
+        return "badge-confidence-95"
+    elif confidence >= 90:
+        return "badge-confidence-90"
+    else:
+        return "badge-confidence-85"
+
+def get_leverage_class(leverage):
+    """Get CSS class for leverage badge"""
+    if "MAX" in leverage:
+        return "badge-leverage-max"
+    return "badge-leverage-low"
+
+def display_signal_compact(signal):
+    """Display compact signal card"""
+    coin = signal['coin']
+    coin_info = COIN_DATA[coin]
+    
+    card_class = "signal-buy" if signal['direction'] == "BUY" else "signal-sell"
+    direction_color = "#00ff00" if signal['direction'] == "BUY" else "#ff0000"
+    confidence_class = get_confidence_class(signal['confidence'])
+    leverage_class = get_leverage_class(signal['leverage'])
+    
+    st.markdown(f'''
+    <div class="signal-card {card_class}">
+        <!-- Coin Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 1.5rem;">{coin_info['emoji']}</span>
+                <div>
+                    <div style="font-family: Orbitron; font-size: 1rem; color: {coin_info['color']};">
+                        {coin}
+                    </div>
+                    <div style="font-size: 0.8rem; color: #aaa;">
+                        {coin_info['name']}
+                    </div>
+                </div>
+            </div>
+            <div style="font-family: Orbitron; font-size: 1.2rem; color: {direction_color}; font-weight: 700;">
+                {signal['direction']}
+            </div>
+        </div>
+        
+        <!-- Badges -->
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem; justify-content: center;">
+            <div class="badge {confidence_class}">
+                {signal['confidence']}%
+            </div>
+            <div class="badge {leverage_class}">
+                {signal['leverage']}
+            </div>
+        </div>
+        
+        <!-- Price -->
+        <div style="text-align: center; font-family: Orbitron; font-size: 1.1rem; color: #ffd700;">
+            ${signal['price']:,.2f}
+        </div>
+    </div>
+    ''', unsafe_allow_html=True)
+
+# ==================== AUTHENTICATION ====================
+def check_login(username, password):
+    """Simple login check"""
+    users = {
         "godziller": "dragonfire2025",
         "admin": "cryptoking",
         "trader": "bullmarket"
     }
-    return username in valid_users and valid_users[username] == password
+    return username in users and users[username] == password
 
 def login_page():
     """Display login page"""
     st.markdown("""
-    <style>
-    .main .block-container {
-        padding-top: 0 !important;
-        padding-bottom: 0 !important;
-    }
-    </style>
+    <div class="login-container">
+        <div class="login-card">
+            <h1 class="login-header">🐲 GODZILLERS</h1>
+            <p style="color: #ff66ff; font-family: Orbitron; margin-bottom: 2rem;">
+                MATHEMATICAL SIGNALS
+            </p>
+        </div>
+    </div>
     """, unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
     
     with col2:
-        st.markdown("""
-        <div style='
-            background: rgba(10, 0, 20, 0.95);
-            border: 2px solid rgba(255, 0, 255, 0.6);
-            border-radius: 20px;
-            padding: 3rem;
-            box-shadow: 0 0 50px rgba(255, 0, 255, 0.5);
-            text-align: center;
-            margin: 2rem 0;
-        '>
-            <h1 style='
-                background: linear-gradient(90deg, #ff00ff 0%, #00ffff 100%);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                font-family: Orbitron, monospace;
-                font-weight: 900;
-                font-size: 2.5rem;
-                margin-bottom: 1rem;
-                text-shadow: 0 0 20px rgba(255, 0, 255, 0.7);
-            '>🐲 GODZILLERS</h1>
-            <p style='
-                color: #ff66ff;
-                font-family: Orbitron, monospace;
-                font-size: 1rem;
-                margin-bottom: 2rem;
-                letter-spacing: 2px;
-            '>MATHEMATICAL SIGNALS | HIGH CONFIDENCE ONLY</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        with st.form("login_form"):
-            username = st.text_input("👤 DRAGON NAME", placeholder="Enter your dragon name...")
-            password = st.text_input("🔐 FIRE BREATH", type="password", placeholder="Enter your fire breath...")
+        with st.form("login"):
+            username = st.text_input("DRAGON NAME", placeholder="Enter username...")
+            password = st.text_input("FIRE BREATH", type="password", placeholder="Enter password...")
             
-            login_button = st.form_submit_button("🔥 IGNITE DRAGON FIRE", use_container_width=True)
-            
-            if login_button:
-                if check_credentials(username, password):
+            if st.form_submit_button("🔥 IGNITE", use_container_width=True):
+                if check_login(username, password):
                     st.session_state.logged_in = True
                     st.session_state.username = username
-                    st.success("✅ Dragon fire ignited! Access granted.")
                     st.rerun()
                 else:
-                    st.error("❌ Invalid dragon name or fire breath!")
-
-# ==================== COIN INFORMATION ====================
-def get_coin_info(symbol):
-    """Get detailed coin information"""
-    coin_info = {
-        'BTCUSDT': {'name': 'Bitcoin', 'emoji': '🐲', 'color': '#FF9900'},
-        'ETHUSDT': {'name': 'Ethereum', 'emoji': '🔥', 'color': '#3C3C3D'},
-        'SUIUSDT': {'name': 'Sui', 'emoji': '💧', 'color': '#6FCF97'},
-        'LINKUSDT': {'name': 'Chainlink', 'emoji': '🔗', 'color': '#2A5ADA'},
-        'SOLUSDT': {'name': 'Solana', 'emoji': '☀️', 'color': '#00FFA3'},
-        'XRPUSDT': {'name': 'Ripple', 'emoji': '✖️', 'color': '#23292F'},
-        'TAOUSDT': {'name': 'Bittensor', 'emoji': '🧠', 'color': '#FF6B00'},
-        'ENAUSDT': {'name': 'Ethena', 'emoji': '⚡', 'color': '#3A86FF'},
-        'ADAUSDT': {'name': 'Cardano', 'emoji': '🔷', 'color': '#0033AD'},
-        'DOGEUSDT': {'name': 'Dogecoin', 'emoji': '🐕', 'color': '#C2A633'},
-        'BRETTUSDT': {'name': 'Brett', 'emoji': '🤖', 'color': '#FF6B6B'}
-    }
-    return coin_info.get(symbol, {'name': symbol, 'emoji': '💀', 'color': '#666666'})
-
-def get_confidence_badge(strength_pct):
-    """Get confidence badge based on strength percentage"""
-    if strength_pct >= 95:
-        return "clean-confidence-95"
-    elif strength_pct >= 90:
-        return "clean-confidence-90"
-    else:
-        return "clean-confidence-85"
-
-def display_clean_signal(signal):
-    """Display clean mathematical signal with beautiful interface"""
-    coin_info = get_coin_info(signal['symbol'])
-    
-    # Signal container class
-    signal_class = "clean-buy-signal" if signal['direction'] == "BUY" else "clean-sell-signal"
-    
-    # Confidence badge class
-    confidence_class = get_confidence_badge(signal['strength_pct'])
-    
-    # Leverage badge class
-    leverage_class = "clean-leverage-max" if "MAX" in signal['leverage'] else "clean-leverage-low"
-    
-    # Format price
-    price_formatted = f"${signal['price']:,.2f}"
-    
-    st.markdown(f'''
-    <div class="{signal_class}">
-        <!-- HEADER -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <div>
-                <h3 style="font-family: Orbitron; font-size: 1.8rem; margin: 0; color: {coin_info['color']};">
-                    {coin_info['emoji']} {coin_info['name']}
-                </h3>
-                <p style="color: #aaa; font-size: 0.9rem; margin: 0.2rem 0;">{signal['symbol']}</p>
-            </div>
-            <div style="text-align: right;">
-                <p style="font-family: Orbitron; font-size: 2.5rem; font-weight: 900; margin: 0; 
-                   color: {'#00ff00' if signal['direction'] == 'BUY' else '#ff0000'};">
-                    {signal['direction']}
-                </p>
-            </div>
-        </div>
-        
-        <!-- CONFIDENCE & LEVERAGE -->
-        <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
-            <div style="flex: 1;">
-                <div class="{confidence_class}" style="text-align: center;">
-                    {signal['strength_pct']}% CONFIDENCE
-                </div>
-            </div>
-            <div style="flex: 1;">
-                <div class="{leverage_class}" style="text-align: center;">
-                    {signal['leverage']}
-                </div>
-            </div>
-        </div>
-        
-        <!-- PRICE -->
-        <div style="text-align: center;">
-            <p style="color: {coin_info['color']}; font-family: Orbitron; font-size: 2rem; font-weight: 700; margin: 0;">
-                {price_formatted}
-            </p>
-        </div>
-    </div>
-    ''', unsafe_allow_html=True)
+                    st.error("Invalid credentials")
 
 # ==================== MAIN APP ====================
 def main_app():
-    """Main application after login"""
-    # Initialize mathematical system
-    if 'math_system' not in st.session_state:
-        st.session_state.math_system = MathematicalSignalSystem()
+    """Main application interface"""
+    # Initialize session state
+    if 'signal_system' not in st.session_state:
+        st.session_state.signal_system = SignalSystem()
     if 'signals' not in st.session_state:
         st.session_state.signals = []
     if 'last_scan' not in st.session_state:
         st.session_state.last_scan = None
     
     # Logout button
-    if st.button("🚪 LOGOUT", key="logout", use_container_width=False):
-        st.session_state.logged_in = False
-        st.session_state.username = None
-        st.rerun()
+    st.markdown("""
+    <button class="logout-button" onclick="window.location.href='?logout=true'">🚪 LOGOUT</button>
+    """, unsafe_allow_html=True)
     
     # Welcome message
-    st.markdown(f'<p style="text-align: right; color: #ff00ff; font-family: Orbitron; margin: 0.5rem 1rem;">Welcome, {st.session_state.username}!</p>', unsafe_allow_html=True)
+    st.markdown(f"""
+    <div style="text-align: right; padding: 0.5rem 1rem;">
+        <span style="color: #ff66ff; font-family: Orbitron;">Welcome, {st.session_state.username}!</span>
+    </div>
+    """, unsafe_allow_html=True)
     
-    # GODZILLERS Header
-    st.markdown('<h1 class="godzillers-header">🔥 GODZILLERS MATHEMATICAL SIGNALS</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="godzillers-subheader">HIGH CONFIDENCE ONLY | 8 EQUATIONS | CLEAN INTERFACE</p>', unsafe_allow_html=True)
+    # Header
+    st.markdown('<h1 class="app-header">🔥 GODZILLERS</h1>', unsafe_allow_html=True)
+    st.markdown('<p class="app-subheader">HIGH-CONFIDENCE MATHEMATICAL SIGNALS</p>', unsafe_allow_html=True)
     
-    # Scan button
-    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-    
+    # Scan Section
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        scan_button = st.button("✨ SCAN FOR HIGH CONFIDENCE SIGNALS", 
-                              key="scan_math", 
-                              use_container_width=True, 
-                              type="primary")
-    
-    if scan_button:
-        with st.spinner("🔮 Calculating high-confidence mathematical signals..."):
-            # Scan for signals
-            st.session_state.signals = st.session_state.math_system.scan_all_coins()
-            st.session_state.last_scan = datetime.now()
-            
-            if st.session_state.signals:
-                st.success(f"🎯 Found {len(st.session_state.signals)} high-confidence signals!")
-            else:
-                st.warning("⚠️ No high-confidence signals found (≥85% confidence required)")
+        if st.button("✨ SCAN 11 COINS", use_container_width=True):
+            with st.spinner("Analyzing..."):
+                st.session_state.signals = st.session_state.signal_system.scan_coins()
+                st.session_state.last_scan = datetime.now()
+                
+                if st.session_state.signals:
+                    st.success(f"Found {len(st.session_state.signals)} signals!")
+                else:
+                    st.info("No high-confidence signals found")
     
     # Last scan info
     if st.session_state.last_scan:
         scan_time = st.session_state.last_scan.strftime("%H:%M:%S")
-        
-        # Calculate time since last scan
-        time_since = datetime.now() - st.session_state.last_scan
-        minutes_ago = int(time_since.total_seconds() / 60)
-        
-        st.markdown(f'''
-        <div style="background: rgba(20, 0, 40, 0.7); border: 1px solid rgba(255, 0, 255, 0.3); 
-                 border-radius: 10px; padding: 1rem; text-align: center; margin: 1rem 0;">
-            <p style="color: #ff66ff; font-family: Orbitron; margin: 0.2rem 0; font-size: 1rem;">
-                Last scan: {scan_time} • {minutes_ago} minutes ago
-            </p>
-            <p style="color: #00ffff; font-family: Orbitron; margin: 0.2rem 0; font-size: 0.9rem;">
-                11 coins analyzed • Only ≥85% confidence shown
-            </p>
+        st.markdown(f"""
+        <div style="text-align: center; color: #ff66ff; font-family: Orbitron; font-size: 0.9rem; margin: 1rem 0;">
+            Last scan: {scan_time} | 11 coins monitored
         </div>
-        ''', unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
-    # Display high-confidence signals
-    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-    
+    # Signals Display
     if st.session_state.signals:
-        st.markdown('<h2 class="section-header">🎯 HIGH CONFIDENCE SIGNALS FOUND</h2>', unsafe_allow_html=True)
+        st.markdown('<h2 class="section-header">🎯 ACTIVE SIGNALS</h2>', unsafe_allow_html=True)
         
-        # Display signals in a responsive grid
-        for signal in st.session_state.signals:
-            display_clean_signal(signal)
+        # Display in columns
+        cols = st.columns(2)
+        for idx, signal in enumerate(st.session_state.signals):
+            with cols[idx % 2]:
+                display_signal_compact(signal)
     else:
         if st.session_state.last_scan:
-            # No signals found
-            st.markdown('<div class="no-signals">', unsafe_allow_html=True)
-            st.markdown('<h3 style="color: #ff9900; font-family: Orbitron; text-align: center;">⚡ NO HIGH CONFIDENCE SIGNALS DETECTED</h3>', unsafe_allow_html=True)
-            st.markdown('<p style="color: #aaa; text-align: center;">Mathematical equations require ≥85% confidence threshold.</p>', unsafe_allow_html=True)
-            st.markdown('<p style="color: #666; text-align: center; font-size: 0.9rem;">Try scanning again in a few minutes when market conditions improve.</p>', unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown("""
+            <div class="no-signals">
+                <p style="color: #ff9900; font-family: Orbitron;">No high-confidence signals</p>
+                <p style="color: #aaa; font-size: 0.9rem;">Confidence must be ≥85%</p>
+            </div>
+            """, unsafe_allow_html=True)
         else:
-            # Initial state
-            st.info("✨ Click the button above to scan for high-confidence mathematical signals")
+            st.info("Click SCAN to find high-confidence signals")
     
-    # Coins being monitored
-    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+    # Monitored Coins
     st.markdown('<h2 class="section-header">📊 MONITORED COINS</h2>', unsafe_allow_html=True)
     
-    # Display coins with status
-    coins_list = [
-        ("BTC", "Bitcoin", "🐲", "#FF9900"),
-        ("ETH", "Ethereum", "🔥", "#3C3C3D"),
-        ("SUI", "Sui", "💧", "#6FCF97"),
-        ("LINK", "Chainlink", "🔗", "#2A5ADA"),
-        ("SOL", "Solana", "☀️", "#00FFA3"),
-        ("XRP", "Ripple", "✖️", "#23292F"),
-        ("TAO", "Bittensor", "🧠", "#FF6B00"),
-        ("ENA", "Ethena", "⚡", "#3A86FF"),
-        ("ADA", "Cardano", "🔷", "#0033AD"),
-        ("DOGE", "Dogecoin", "🐕", "#C2A633"),
-        ("BRETT", "Brett", "🤖", "#FF6B6B")
-    ]
-    
-    # Create columns for coin display
+    # Display coins in grid
     cols = st.columns(4)
-    for idx, (symbol, name, emoji, color) in enumerate(coins_list):
+    for idx, coin in enumerate(st.session_state.signal_system.coins):
         with cols[idx % 4]:
-            # Check if this coin has a signal
-            has_signal = any(s['symbol'] == f"{symbol}USDT" for s in st.session_state.signals)
+            coin_info = COIN_DATA[coin]
+            has_signal = any(s['coin'] == coin for s in st.session_state.signals)
             
-            status_color = "#00ff00" if has_signal else "#666666"
-            status_text = "✅ ACTIVE" if has_signal else "📡 MONITORING"
-            
-            st.markdown(f'''
-            <div style="background: rgba(20, 0, 40, 0.7); border: 2px solid {color}; 
-                     border-radius: 10px; padding: 1rem; text-align: center; margin-bottom: 0.5rem;">
-                <p style="font-family: Orbitron; color: {color}; margin: 0.2rem 0; font-size: 1.2rem;">{emoji} {name}</p>
-                <p style="color: {color}; font-size: 0.9rem; margin: 0;">{symbol}/USDT</p>
-                <div style="margin-top: 0.5rem;">
-                    <p style="color: {status_color}; font-size: 0.8rem; font-family: Orbitron; margin: 0;">{status_text}</p>
+            st.markdown(f"""
+            <div class="coin-card">
+                <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">{coin_info['emoji']}</div>
+                <div style="font-family: Orbitron; color: {coin_info['color']}; font-size: 0.9rem;">
+                    {coin}
+                </div>
+                <div style="font-size: 0.7rem; color: #aaa; margin-top: 0.2rem;">
+                    {coin_info['name']}
+                </div>
+                <div style="font-size: 0.6rem; color: {'#00ff00' if has_signal else '#666'}; margin-top: 0.3rem;">
+                    {'✅ SIGNAL' if has_signal else '📡 MONITORING'}
                 </div>
             </div>
-            ''', unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
     
     # Footer
-    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
     st.markdown("""
-    <div style="text-align: center; color: #ff66ff; padding: 2rem 1rem;">
-        <p style="font-family: Orbitron; font-size: 1rem; margin-bottom: 0.5rem;">
-            🔥 GODZILLERS MATHEMATICAL SIGNALS 🔥
-        </p>
-        <p style="color: #aaa; font-size: 0.8rem; margin-bottom: 0.3rem;">
-            High Confidence Only • 8 Mathematical Equations • Clean Interface
-        </p>
-        <p style="color: #666; font-size: 0.7rem;">
-            BTC • ETH • SUI • LINK • SOL • XRP • TAO • ENA • ADA • DOGE • BRETT
-        </p>
+    <div style="text-align: center; margin-top: 2rem; padding: 1rem; color: #666; font-size: 0.8rem;">
+        <p>🔥 GODZILLERS MATHEMATICAL SIGNALS 🔥</p>
+        <p style="font-size: 0.7rem;">11 Coins • High Confidence Only • 8 Equations</p>
     </div>
     """, unsafe_allow_html=True)
 
+# ==================== MAIN FUNCTION ====================
 def main():
-    """Main function with login check"""
-    # Initialize session state
-    if 'logged_in' not in st.session_state:
+    """Main application controller"""
+    # Check for logout
+    query_params = st.query_params
+    if "logout" in query_params:
         st.session_state.logged_in = False
-    if 'username' not in st.session_state:
         st.session_state.username = None
+        st.query_params.clear()
     
-    # Check if user is logged in
+    # Initialize session
+    if "logged_in" not in st.session_state:
+        st.session_state.logged_in = False
+    
+    # Show appropriate page
     if not st.session_state.logged_in:
         login_page()
     else:
