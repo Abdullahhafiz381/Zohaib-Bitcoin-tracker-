@@ -1,4 +1,4 @@
-# app.py - GODZILLERS HYBRID MATHEMATICAL CONFIRMATION BOT
+# app.py - GODZILLERS INDEPENDENT SIGNAL BOT
 import streamlit as st
 import requests
 import pandas as pd
@@ -13,26 +13,15 @@ import ccxt  # Added for mathematical equations
 
 # GODZILLERS Streamlit setup
 st.set_page_config(
-    page_title="🔥 GODZILLERS MATHEMATICAL HYBRID",
+    page_title="🔥 GODZILLERS INDEPENDENT SIGNALS",
     page_icon="🐲",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# GODZILLERS CSS with red and black theme - UPDATED FOR BETTER LOGIN
+# GODZILLERS CSS with red and black theme
 st.markdown("""
 <style>
-    /* Hide all Streamlit elements on login page */
-    .login-page .main > div {
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-    
-    .login-page #MainMenu {visibility: hidden;}
-    .login-page header {visibility: hidden;}
-    .login-page footer {visibility: hidden;}
-    .login-page .stAppView {padding: 0 !important; margin: 0 !important;}
-    
     .main {
         background: linear-gradient(135deg, #000000 0%, #1a0000 50%, #330000 100%);
         color: #ffffff;
@@ -66,42 +55,22 @@ st.markdown("""
         text-transform: uppercase;
     }
     
-    .godzillers-card {
-        background: rgba(20, 0, 0, 0.9);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 0, 0, 0.5);
-        border-radius: 15px;
-        padding: 1.5rem;
-        margin: 0.5rem 0;
-        box-shadow: 0 8px 32px rgba(255, 0, 0, 0.3);
-        transition: all 0.3s ease;
-    }
-    
-    .signal-buy {
-        background: linear-gradient(135deg, rgba(0, 255, 0, 0.15) 0%, rgba(0, 100, 0, 0.3) 100%);
-        border: 2px solid #00ff00;
+    .bitnode-signal {
+        background: linear-gradient(135deg, rgba(0, 0, 255, 0.15) 0%, rgba(0, 0, 100, 0.3) 100%);
+        border: 3px solid #00aaff;
         border-radius: 12px;
         padding: 1.5rem;
-        margin: 0.5rem 0;
-        box-shadow: 0 0 25px rgba(0, 255, 0, 0.4);
+        margin: 1rem 0;
+        box-shadow: 0 0 35px rgba(0, 170, 255, 0.6);
     }
     
-    .signal-sell {
-        background: linear-gradient(135deg, rgba(255, 0, 0, 0.2) 0%, rgba(100, 0, 0, 0.4) 100%);
-        border: 2px solid #ff0000;
+    .math-signal {
+        background: linear-gradient(135deg, rgba(255, 0, 255, 0.15) 0%, rgba(100, 0, 100, 0.3) 100%);
+        border: 3px solid #ff00ff;
         border-radius: 12px;
         padding: 1.5rem;
-        margin: 0.5rem 0;
-        box-shadow: 0 0 25px rgba(255, 0, 0, 0.5);
-    }
-    
-    .signal-neutral {
-        background: linear-gradient(135deg, rgba(255, 165, 0, 0.1) 0%, rgba(100, 65, 0, 0.3) 100%);
-        border: 1px solid #ffa500;
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin: 0.5rem 0;
-        box-shadow: 0 0 20px rgba(255, 165, 0, 0.3);
+        margin: 1rem 0;
+        box-shadow: 0 0 35px rgba(255, 0, 255, 0.6);
     }
     
     .confirmed-signal {
@@ -109,7 +78,7 @@ st.markdown("""
         border: 3px solid #00ff00;
         border-radius: 12px;
         padding: 1.5rem;
-        margin: 0.5rem 0;
+        margin: 1rem 0;
         box-shadow: 0 0 35px rgba(0, 255, 0, 0.6);
         animation: pulse-confirmed 2s infinite;
     }
@@ -120,25 +89,22 @@ st.markdown("""
         100% { box-shadow: 0 0 25px rgba(0, 255, 0, 0.6); }
     }
     
-    .warning-signal {
-        background: linear-gradient(135deg, rgba(255, 0, 0, 0.2) 0%, rgba(100, 0, 0, 0.4) 100%);
-        border: 3px solid #ff0000;
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin: 0.5rem 0;
-        box-shadow: 0 0 35px rgba(255, 0, 0, 0.6);
-        animation: pulse-warning 2s infinite;
-    }
-    
-    @keyframes pulse-warning {
-        0% { box-shadow: 0 0 25px rgba(255, 0, 0, 0.6); }
-        50% { box-shadow: 0 0 40px rgba(255, 0, 0, 0.9); }
-        100% { box-shadow: 0 0 25px rgba(255, 0, 0, 0.6); }
+    .bitnode-badge {
+        display: inline-block;
+        background: linear-gradient(90deg, #00aaff, #0088cc);
+        color: #000000;
+        font-family: 'Orbitron', monospace;
+        font-weight: 700;
+        padding: 0.3rem 0.8rem;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        margin: 0.2rem;
+        box-shadow: 0 0 10px rgba(0, 170, 255, 0.5);
     }
     
     .math-badge {
         display: inline-block;
-        background: linear-gradient(90deg, #ff00ff, #00ffff);
+        background: linear-gradient(90deg, #ff00ff, #cc00cc);
         color: #000000;
         font-family: 'Orbitron', monospace;
         font-weight: 700;
@@ -162,19 +128,6 @@ st.markdown("""
         box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
     }
     
-    .warning-badge {
-        display: inline-block;
-        background: linear-gradient(90deg, #ff0000, #cc0000);
-        color: #ffffff;
-        font-family: 'Orbitron', monospace;
-        font-weight: 700;
-        padding: 0.3rem 0.8rem;
-        border-radius: 15px;
-        font-size: 0.8rem;
-        margin: 0.2rem;
-        box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
-    }
-    
     .leverage-badge {
         display: inline-block;
         background: linear-gradient(90deg, #ff9900, #ff5500);
@@ -188,7 +141,6 @@ st.markdown("""
         box-shadow: 0 0 10px rgba(255, 153, 0, 0.5);
     }
     
-    /* Login Page Styles - SIMPLIFIED AND CENTERED */
     .login-container {
         display: flex;
         justify-content: center;
@@ -241,12 +193,6 @@ st.markdown("""
         font-size: 1rem;
     }
     
-    .login-input:focus {
-        outline: none;
-        border-color: #ff0000;
-        box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
-    }
-    
     .login-button {
         background: linear-gradient(90deg, #ff0000 0%, #cc0000 100%);
         border: none;
@@ -262,12 +208,6 @@ st.markdown("""
         text-transform: uppercase;
         letter-spacing: 1px;
         font-size: 1.1rem;
-    }
-    
-    .login-button:hover {
-        background: linear-gradient(90deg, #ff4444 0%, #ff0000 100%);
-        transform: scale(1.05);
-        box-shadow: 0 0 30px rgba(255, 0, 0, 0.7);
     }
     
     .logout-button {
@@ -496,8 +436,7 @@ class MathematicalEquations:
             'sigma': round(sigma_t, 4)
         }
 
-# ==================== BITNODE BOT ANALYSIS (KEPT) ====================
-# CryptoAnalyzer (Original - Kept Same)
+# ==================== BITNODE BOT ANALYSIS ====================
 class CryptoAnalyzer:
     def __init__(self, data_file="network_data.json"):
         self.data_file = data_file
@@ -637,12 +576,12 @@ class CryptoAnalyzer:
             'momentum': tor_pct_change * 100
         }
 
-# ==================== HYBRID CONFIRMATION SYSTEM ====================
-class HybridConfirmationSystem:
-    """Combine Bitnode Bot + Mathematical Equations for confirmation"""
+# ==================== INDEPENDENT SIGNAL SYSTEMS ====================
+class IndependentSignalSystems:
+    """Both systems show their own independent signals"""
     
     def __init__(self):
-        self.original_analyzer = CryptoAnalyzer()
+        self.bitnode_analyzer = CryptoAnalyzer()
         self.math_equations = MathematicalEquations()
         # Your specific coins list
         self.trading_pairs = [
@@ -664,98 +603,85 @@ class HybridConfirmationSystem:
         except:
             return None
     
-    def generate_hybrid_signal(self, symbol):
-        """Generate hybrid signal using Bitnode and Mathematical equations"""
-        # Get current price
-        current_price = self.get_current_price(symbol)
-        if not current_price:
-            return None
+    def get_bitnode_signal(self):
+        """Get independent Bitnode signal"""
+        tor_signal = self.bitnode_analyzer.calculate_tor_signal()
         
-        # Get Bitnode bot signal (Tor analysis)
-        tor_signal = self.original_analyzer.calculate_tor_signal()
-        
-        # Get mathematical signal
-        math_signal = self.math_equations.generate_mathematical_signal(symbol)
-        
-        if not math_signal:
-            return None
-        
-        # Determine if signals agree
-        signals_agree = False
-        
-        # Convert all signals to simple BUY/SELL/HOLD
-        bitnode_direction = "HOLD"
-        tor_bias = tor_signal['bias']
-        
-        if "BULLISH" in tor_bias:
-            bitnode_direction = "BUY"
-        elif "BEARISH" in tor_bias:
-            bitnode_direction = "SELL"
-        
-        math_direction = math_signal['direction']
-        
-        # Check agreement
-        if bitnode_direction == math_direction and bitnode_direction != "HOLD":
-            signals_agree = True
-            confirmation = "✅ CONFIRMED"
-            signal_class = "confirmed-signal"
-        elif bitnode_direction == "HOLD" and math_direction != "HOLD":
-            confirmation = "⚠️ MATH ONLY"
-            signal_class = "warning-signal"
-            signals_agree = False
-        elif math_direction == "HOLD" and bitnode_direction != "HOLD":
-            confirmation = "⚠️ BITNODE ONLY"
-            signal_class = "warning-signal"
-            signals_agree = False
+        # Add timestamp and additional info
+        if self.bitnode_analyzer.current_data:
+            tor_percentage = self.bitnode_analyzer.current_data['tor_percentage']
+            total_nodes = self.bitnode_analyzer.current_data['total_nodes']
         else:
-            confirmation = "❌ CONFLICT"
-            signal_class = "warning-signal"
-            signals_agree = False
-        
-        # Get leverage indication from mathematical signal
-        leverage_indication = math_signal['leverage']
+            tor_percentage = 0
+            total_nodes = 0
         
         return {
-            'symbol': symbol.replace("/", ""),
-            'display_symbol': symbol,
-            'bitnode_direction': bitnode_direction,
-            'math_direction': math_direction,
-            'confirmation': confirmation,
-            'signals_agree': signals_agree,
-            'signal_class': signal_class,
-            'strength_pct': math_signal['strength_pct'],
-            'leverage': leverage_indication,
-            'max_leverage_value': math_signal['max_leverage_value'],
-            'price': math_signal['price'],
-            'current_price': current_price,
-            'math_details': {
-                'signal_raw': math_signal['signal_raw'],
-                'imbalance': math_signal['imbalance'],
-                'phi': math_signal['phi'],
-                'sigma': math_signal['sigma']
-            },
-            'bitnode_details': {
-                'tor_signal': tor_signal['signal'],
-                'tor_bias': tor_signal['bias'],
-                'tor_change': tor_signal['tor_change']
-            }
+            'signal': tor_signal['signal'],
+            'bias': tor_signal['bias'],
+            'strength': tor_signal['strength'],
+            'tor_change': tor_signal['tor_change'],
+            'tor_percentage': tor_percentage,
+            'total_nodes': total_nodes,
+            'timestamp': datetime.now().isoformat()
         }
     
-    def scan_all_pairs(self):
-        """Scan all 11 specific trading pairs"""
-        all_signals = []
+    def get_mathematical_signals(self):
+        """Get independent mathematical signals for all coins"""
+        all_math_signals = []
         
         for pair in self.trading_pairs:
-            signal = self.generate_hybrid_signal(pair)
-            if signal:
-                all_signals.append(signal)
+            # Get mathematical signal
+            math_signal = self.math_equations.generate_mathematical_signal(pair)
+            
+            if math_signal:
+                # Get current price
+                current_price = self.get_current_price(pair)
+                
+                signal_data = {
+                    'symbol': pair.replace("/", ""),
+                    'display_symbol': pair,
+                    'direction': math_signal['direction'],
+                    'strength_pct': math_signal['strength_pct'],
+                    'leverage': math_signal['leverage'],
+                    'max_leverage_value': math_signal['max_leverage_value'],
+                    'price': math_signal['price'],
+                    'current_price': current_price if current_price else math_signal['price'],
+                    'math_details': {
+                        'signal_raw': math_signal['signal_raw'],
+                        'imbalance': math_signal['imbalance'],
+                        'phi': math_signal['phi'],
+                        'sigma': math_signal['sigma']
+                    },
+                    'timestamp': datetime.now().isoformat()
+                }
+                all_math_signals.append(signal_data)
+            
             time.sleep(0.1)  # Rate limiting
         
         # Sort by signal strength
-        all_signals.sort(key=lambda x: x['strength_pct'], reverse=True)
+        all_math_signals.sort(key=lambda x: x['strength_pct'], reverse=True)
         
-        # Only take confirmed signals (where both agree)
-        confirmed_signals = [s for s in all_signals if s['signals_agree']]
+        return all_math_signals
+    
+    def get_agreement_signals(self, bitnode_signal, math_signals):
+        """Find where both systems agree"""
+        confirmed_signals = []
+        
+        # Convert bitnode bias to direction
+        bitnode_direction = "HOLD"
+        if "BULLISH" in bitnode_signal['bias']:
+            bitnode_direction = "BUY"
+        elif "BEARISH" in bitnode_signal['bias']:
+            bitnode_direction = "SELL"
+        
+        for math_signal in math_signals:
+            if math_signal['direction'] == bitnode_direction and bitnode_direction != "HOLD":
+                # They agree!
+                confirmed_signal = math_signal.copy()
+                confirmed_signal['bitnode_signal'] = bitnode_signal['signal']
+                confirmed_signal['bitnode_bias'] = bitnode_signal['bias']
+                confirmed_signals.append(confirmed_signal)
+        
         return confirmed_signals
 
 # Simple authentication system
@@ -769,7 +695,7 @@ def check_credentials(username, password):
     return username in valid_users and valid_users[username] == password
 
 def login_page():
-    """Display login page - SIMPLIFIED VERSION"""
+    """Display login page"""
     st.markdown("""
     <style>
     .main .block-container {
@@ -808,7 +734,7 @@ def login_page():
                 font-size: 1rem;
                 margin-bottom: 2rem;
                 letter-spacing: 2px;
-            '>BITNODE + MATHEMATICAL HYBRID CONFIRMATION</p>
+            '>INDEPENDENT SIGNAL SYSTEMS</p>
         </div>
         """, unsafe_allow_html=True)
         
@@ -862,13 +788,102 @@ def get_coin_emoji(symbol):
     }
     return emojis.get(symbol, '💀')
 
+def display_bitnode_signal(bitnode_signal):
+    """Display Bitnode signal"""
+    bias_color = "#00aaff"  # Blue for Bitnode
+    if "BEARISH" in bitnode_signal['bias']:
+        bias_color = "#ff4444"
+    elif "BULLISH" in bitnode_signal['bias']:
+        bias_color = "#00ff00"
+    
+    st.markdown(f'''
+    <div class="bitnode-signal">
+        <div style="text-align: center;">
+            <h3 style="font-family: Orbitron; margin: 0.5rem 0; font-size: 1.5rem;">🌐 BITNODE MARKET SIGNAL</h3>
+            <p style="font-family: Orbitron; font-size: 2rem; font-weight: 700; margin: 0.5rem 0; color: {bias_color};">{bitnode_signal['signal']}</p>
+            <p style="color: #ffd700; font-family: Orbitron; font-size: 1.3rem; margin: 0.5rem 0;">STRENGTH: {bitnode_signal['strength']}</p>
+            <p style="color: #ffffff; font-family: Orbitron; font-size: 1rem; margin: 0.5rem 0;">Tor Change: {bitnode_signal['tor_change']:.2f}%</p>
+            <p style="color: #aaa; font-family: Orbitron; font-size: 0.9rem; margin: 0.5rem 0;">Tor Nodes: {bitnode_signal['tor_percentage']:.1f}% | Total Nodes: {bitnode_signal['total_nodes']:,}</p>
+        </div>
+        
+        <div style="text-align: center; margin: 1rem 0;">
+            <span class="bitnode-badge">BITNODE ANALYSIS</span>
+            <span class="bitnode-badge">{bitnode_signal['bias']}</span>
+            <span class="bitnode-badge">TOR SIGNAL</span>
+        </div>
+    </div>
+    ''', unsafe_allow_html=True)
+
+def display_math_signal(signal):
+    """Display mathematical signal"""
+    display_name = get_coin_display_name(signal['symbol'])
+    emoji = get_coin_emoji(signal['symbol'])
+    
+    direction_color = "#00ff00" if signal['direction'] == "BUY" else "#ff4444"
+    
+    st.markdown(f'''
+    <div class="math-signal">
+        <div style="text-align: center;">
+            <h4 style="font-family: Orbitron; margin: 0.5rem 0; font-size: 1.2rem;">{emoji} {display_name} ({signal['symbol']})</h4>
+            <p style="font-family: Orbitron; font-size: 1.8rem; font-weight: 700; margin: 0.5rem 0; color: {direction_color};">{signal['direction']} {signal['direction']}</p>
+            <p style="color: #ffd700; font-family: Orbitron; font-size: 1.1rem; margin: 0.5rem 0;">STRENGTH: {signal['strength_pct']}%</p>
+            <p style="color: #ff9900; font-family: Orbitron; font-size: 1rem; margin: 0.5rem 0;">LEVERAGE: {signal['leverage']}</p>
+            <p style="color: #ffffff; font-family: Orbitron; font-size: 0.9rem; margin: 0.5rem 0;">PRICE: ${signal['price']:,.2f}</p>
+        </div>
+        
+        <div style="text-align: center; margin: 0.5rem 0;">
+            <span class="math-badge">MATHEMATICAL</span>
+            <span class="math-badge">STRENGTH: {signal['strength_pct']}%</span>
+            <span class="leverage-badge">{signal['leverage']}</span>
+        </div>
+        
+        <div style="color: #aaa; font-size: 0.7rem; text-align: center; margin-top: 0.5rem;">
+            Signal: {signal['math_details']['signal_raw']:.3f} | 
+            I={signal['math_details']['imbalance']:.3f} | 
+            φ={signal['math_details']['phi']:.6f}
+        </div>
+    </div>
+    ''', unsafe_allow_html=True)
+
+def display_confirmed_signal(signal):
+    """Display confirmed signal (both systems agree)"""
+    display_name = get_coin_display_name(signal['symbol'])
+    emoji = get_coin_emoji(signal['symbol'])
+    
+    st.markdown(f'''
+    <div class="confirmed-signal">
+        <div style="text-align: center;">
+            <h3 style="font-family: Orbitron; margin: 0.5rem 0; font-size: 1.5rem;">{emoji} {display_name} ({signal['symbol']})</h3>
+            <p style="font-family: Orbitron; font-size: 2rem; font-weight: 700; margin: 0.5rem 0; color: #00ff00;">{signal['direction']} {signal['direction']}</p>
+            <p style="color: #ffd700; font-family: Orbitron; font-size: 1.3rem; margin: 0.5rem 0;">STRENGTH: {signal['strength_pct']}%</p>
+            <p style="color: #ff9900; font-family: Orbitron; font-size: 1.2rem; margin: 0.5rem 0;">LEVERAGE: {signal['leverage']}</p>
+            <p style="color: #ffffff; font-family: Orbitron; font-size: 1rem; margin: 0.5rem 0;">PRICE: ${signal['price']:,.2f}</p>
+        </div>
+        
+        <div style="text-align: center; margin: 1rem 0;">
+            <span class="confirmation-badge">✓ BOTH SYSTEMS AGREE</span>
+            <span class="bitnode-badge">Bitnode: {signal['bitnode_signal']}</span>
+            <span class="math-badge">Math: {signal['strength_pct']}%</span>
+        </div>
+        
+        <div style="color: #aaa; font-size: 0.8rem; text-align: center; margin-top: 1rem;">
+            Bitnode Bias: {signal['bitnode_bias']} | 
+            Math Signal: {signal['math_details']['signal_raw']:.3f}
+        </div>
+    </div>
+    ''', unsafe_allow_html=True)
+
 def main_app():
     """Main application after login"""
-    # Initialize hybrid system
-    if 'hybrid_system' not in st.session_state:
-        st.session_state.hybrid_system = HybridConfirmationSystem()
-    if 'signals' not in st.session_state:
-        st.session_state.signals = []
+    # Initialize systems
+    if 'signal_systems' not in st.session_state:
+        st.session_state.signal_systems = IndependentSignalSystems()
+    if 'bitnode_signal' not in st.session_state:
+        st.session_state.bitnode_signal = None
+    if 'math_signals' not in st.session_state:
+        st.session_state.math_signals = []
+    if 'confirmed_signals' not in st.session_state:
+        st.session_state.confirmed_signals = []
     if 'last_scan' not in st.session_state:
         st.session_state.last_scan = None
     
@@ -882,145 +897,143 @@ def main_app():
     st.markdown(f'<p style="text-align: right; color: #ff4444; font-family: Orbitron; margin: 0.5rem 1rem;">Welcome, {st.session_state.username}!</p>', unsafe_allow_html=True)
     
     # GODZILLERS Header
-    st.markdown('<h1 class="godzillers-header">🔥 GODZILLERS HYBRID CONFIRMATION</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="godzillers-subheader">BITNODE BOT + 8 MATHEMATICAL EQUATIONS CONFIRMATION</p>', unsafe_allow_html=True)
+    st.markdown('<h1 class="godzillers-header">🔥 GODZILLERS INDEPENDENT SIGNALS</h1>', unsafe_allow_html=True)
+    st.markdown('<p class="godzillers-subheader">BITNODE + MATHEMATICAL SYSTEMS - BOTH SHOW OWN SIGNALS</p>', unsafe_allow_html=True)
     
-    # Update data button
+    # Scan button
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
     col1, col2 = st.columns([3, 1])
     with col1:
-        st.markdown('<h2 class="section-header">🧮 HYBRID SIGNAL CONFIRMATION</h2>', unsafe_allow_html=True)
+        st.markdown('<h2 class="section-header">📡 SCAN ALL SYSTEMS</h2>', unsafe_allow_html=True)
     with col2:
-        if st.button("🐉 SCAN 11 COINS", key="scan_hybrid", use_container_width=True, type="primary"):
-            with st.spinner("🔥 Activating hybrid analysis..."):
+        if st.button("🐉 SCAN ALL SYSTEMS", key="scan_all", use_container_width=True, type="primary"):
+            with st.spinner("🔥 Scanning all systems..."):
                 # Update Bitnodes data
-                st.session_state.hybrid_system.original_analyzer.update_node_data()
-                # Scan all pairs
-                st.session_state.signals = st.session_state.hybrid_system.scan_all_pairs()
+                st.session_state.signal_systems.bitnode_analyzer.update_node_data()
+                
+                # Get Bitnode signal
+                st.session_state.bitnode_signal = st.session_state.signal_systems.get_bitnode_signal()
+                
+                # Get Mathematical signals
+                st.session_state.math_signals = st.session_state.signal_systems.get_mathematical_signals()
+                
+                # Get agreement signals
+                st.session_state.confirmed_signals = st.session_state.signal_systems.get_agreement_signals(
+                    st.session_state.bitnode_signal, st.session_state.math_signals
+                )
+                
                 st.session_state.last_scan = datetime.now()
-                if st.session_state.signals:
-                    st.success(f"✅ Found {len(st.session_state.signals)} confirmed signals!")
-                else:
-                    st.warning("⚠️ No confirmed signals (both systems must agree)")
+                st.success("✅ All systems scanned!")
     
-    # Last scan time and Bitnode status
+    # Last scan time
     if st.session_state.last_scan:
         scan_time = st.session_state.last_scan.strftime("%H:%M:%S")
-        tor_signal = st.session_state.hybrid_system.original_analyzer.calculate_tor_signal()
-        tor_change = tor_signal['tor_change']
-        tor_signal_text = tor_signal['signal']
-        
-        st.markdown(f'''
-        <div style="background: rgba(30, 0, 0, 0.7); border: 1px solid rgba(255, 0, 0, 0.3); 
-                 border-radius: 10px; padding: 1rem; text-align: center; margin: 0.5rem 0;">
-            <p style="color: #ff6666; font-family: Orbitron; margin: 0.2rem 0; font-size: 0.9rem;">
-                Last scan: {scan_time} | 11 coins analyzed
-            </p>
-            <p style="color: #ff9900; font-family: Orbitron; margin: 0.2rem 0; font-size: 0.9rem;">
-                Bitnode Signal: {tor_signal_text} | Tor Change: {tor_change:.2f}%
-            </p>
-        </div>
-        ''', unsafe_allow_html=True)
+        st.markdown(f'<p style="color: #ff6666; text-align: center;">Last scan: {scan_time} | 11 coins analyzed</p>', unsafe_allow_html=True)
     
-    # Display hybrid signals
-    if st.session_state.signals:
-        st.markdown('<h3 style="font-family: Orbitron; color: #00ff00; margin: 1rem 0;">✅ CONFIRMED SIGNALS (BOTH SYSTEMS AGREE)</h3>', unsafe_allow_html=True)
-        
-        for signal in st.session_state.signals:
-            display_name = get_coin_display_name(signal['symbol'])
-            emoji = get_coin_emoji(signal['symbol'])
-            
-            st.markdown(f'''
-            <div class="{signal['signal_class']}">
-                <div style="text-align: center;">
-                    <h3 style="font-family: Orbitron; margin: 0.5rem 0; font-size: 1.5rem;">{emoji} {display_name} ({signal['symbol']})</h3>
-                    <p style="font-family: Orbitron; font-size: 2rem; font-weight: 700; margin: 0.5rem 0; color: #00ff00;">{signal['math_direction']} {signal['math_direction']}</p>
-                    <p style="color: #ffd700; font-family: Orbitron; font-size: 1.3rem; margin: 0.5rem 0;">STRENGTH: {signal['strength_pct']}%</p>
-                    <p style="color: #ff9900; font-family: Orbitron; font-size: 1.2rem; margin: 0.5rem 0;">LEVERAGE: {signal['leverage']}</p>
-                    <p style="color: #ffffff; font-family: Orbitron; font-size: 1rem; margin: 0.5rem 0;">PRICE: ${signal['price']:,.2f}</p>
-                </div>
-                
-                <div style="text-align: center; margin: 1rem 0;">
-                    <span class="confirmation-badge">✓ BOTH SYSTEMS CONFIRM</span>
-                    <span class="math-badge">MATH: {signal['math_direction']}</span>
-                    <span class="leverage-badge">{signal['leverage']}</span>
-                </div>
-                
-                <div style="color: #aaa; font-size: 0.8rem; text-align: center; margin-top: 1rem;">
-                    Bitnode: {signal['bitnode_details']['tor_signal']} | 
-                    Math Signal: {signal['math_details']['signal_raw']:.3f} | 
-                    I={signal['math_details']['imbalance']:.3f}
-                </div>
-            </div>
-            ''', unsafe_allow_html=True)
+    # Display BITNODE SIGNAL (always show)
+    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-header" style="color: #00aaff;">🌐 BITNODE MARKET SIGNAL</h2>', unsafe_allow_html=True)
+    
+    if st.session_state.bitnode_signal:
+        display_bitnode_signal(st.session_state.bitnode_signal)
     else:
-        if st.session_state.last_scan:
-            st.markdown('<div class="signal-neutral"><p style="text-align: center; color: #ff9900; font-family: Orbitron;">⚠️ No confirmed signals found. Both Bitnode and Mathematical systems must agree.</p></div>', unsafe_allow_html=True)
-        else:
-            st.info("🔥 Click 'SCAN 11 COINS' to get hybrid confirmation signals")
+        st.info("Click 'SCAN ALL SYSTEMS' to get Bitnode market signal")
+    
+    # Display MATHEMATICAL SIGNALS
+    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-header" style="color: #ff00ff;">🧮 MATHEMATICAL SIGNALS</h2>', unsafe_allow_html=True)
+    
+    if st.session_state.math_signals:
+        # Display mathematical signals in columns
+        cols = st.columns(2)
+        for idx, signal in enumerate(st.session_state.math_signals):
+            with cols[idx % 2]:
+                display_math_signal(signal)
+    else:
+        st.info("Click 'SCAN ALL SYSTEMS' to get mathematical signals")
+    
+    # Display CONFIRMED SIGNALS (where both agree)
+    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-header" style="color: #00ff00;">✅ CONFIRMED SIGNALS (BOTH AGREE)</h2>', unsafe_allow_html=True)
+    
+    if st.session_state.confirmed_signals:
+        for signal in st.session_state.confirmed_signals:
+            display_confirmed_signal(signal)
+    else:
+        st.info("No confirmed signals found (systems don't agree yet)")
     
     # Coins being monitored
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
     st.markdown('<h2 class="section-header">📊 COINS BEING MONITORED</h2>', unsafe_allow_html=True)
     
     coins_list = [
-        ("BTC", "Bitcoin", "🐲"),
-        ("ETH", "Ethereum", "🔥"),
-        ("SUI", "Sui", "💧"),
-        ("LINK", "Chainlink", "🔗"),
-        ("SOL", "Solana", "☀️"),
-        ("XRP", "Ripple", "✖️"),
-        ("TAO", "Bittensor", "🧠"),
-        ("ENA", "Ethena", "⚡"),
-        ("ADA", "Cardano", "🔷"),
-        ("DOGE", "Dogecoin", "🐕"),
-        ("BRETT", "Brett", "🤖")
+        ("BTC", "Bitcoin", "🐲", "#FF9900"),
+        ("ETH", "Ethereum", "🔥", "#3C3C3D"),
+        ("SUI", "Sui", "💧", "#6FCF97"),
+        ("LINK", "Chainlink", "🔗", "#2A5ADA"),
+        ("SOL", "Solana", "☀️", "#00FFA3"),
+        ("XRP", "Ripple", "✖️", "#23292F"),
+        ("TAO", "Bittensor", "🧠", "#FF6B00"),
+        ("ENA", "Ethena", "⚡", "#3A86FF"),
+        ("ADA", "Cardano", "🔷", "#0033AD"),
+        ("DOGE", "Dogecoin", "🐕", "#C2A633"),
+        ("BRETT", "Brett", "🤖", "#FF6B6B")
     ]
     
     # Display coins in a grid
     cols = st.columns(4)
-    for idx, (symbol, name, emoji) in enumerate(coins_list):
+    for idx, (symbol, name, emoji, color) in enumerate(coins_list):
         with cols[idx % 4]:
             st.markdown(f'''
-            <div style="background: rgba(30, 0, 0, 0.7); border: 1px solid rgba(255, 0, 0, 0.3); 
+            <div style="background: rgba(30, 0, 0, 0.7); border: 2px solid {color}; 
                      border-radius: 10px; padding: 1rem; text-align: center; margin-bottom: 0.5rem;">
-                <p style="font-family: Orbitron; color: #ff4444; margin: 0.2rem 0; font-size: 1.2rem;">{emoji} {name}</p>
-                <p style="color: #ff8888; font-size: 0.9rem; margin: 0;">{symbol}/USDT</p>
+                <p style="font-family: Orbitron; color: {color}; margin: 0.2rem 0; font-size: 1.2rem;">{emoji} {name}</p>
+                <p style="color: {color}; font-size: 0.9rem; margin: 0;">{symbol}/USDT</p>
             </div>
             ''', unsafe_allow_html=True)
     
-    # Mathematical equations info
+    # Systems info
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-    st.markdown('<h2 class="section-header">🧮 MATHEMATICAL EQUATIONS ACTIVE</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-header">🤖 ACTIVE SYSTEMS</h2>', unsafe_allow_html=True)
     
-    st.markdown("""
-    <div style="background: rgba(20, 0, 0, 0.8); border: 1px solid rgba(255, 0, 0, 0.5); border-radius: 15px; padding: 1.5rem;">
-        <p style="color: #ff6666; font-family: Orbitron; font-size: 1.1rem;">✅ ALL 8 EQUATIONS IMPLEMENTED:</p>
-        <p style="color: #aaa; font-size: 0.9rem; margin: 0.5rem 0;">
-            1. P_t = (Bid_t + Ask_t)/2<br>
-            2. V_t^{bid} = Σ BidVolume_i, V_t^{ask} = Σ AskVolume_i<br>
-            3. I_t = (V_t^{bid} - V_t^{ask})/(V_t^{bid} + V_t^{ask})<br>
-            4. S_t = Ask_t - Bid_t<br>
-            5. φ_t = S_t/P_t<br>
-            6. σ̂_t = StdDev(returns)<br>
-            7. Signal_t = sign(I_t) × |I_t|/(φ_t × σ̂_t)<br>
-            8. L_max = 1 + L₀/σ̂_t (display only)
-        </p>
-        <p style="color: #ff9900; font-size: 0.9rem; margin-top: 1rem;">
-            ⚡ Signals shown only when both Bitnode and Math agree<br>
-            ⚡ Leverage: LOW LEVERAGE or MAX LEVERAGE only<br>
-            ⚡ 11 specific coins monitored
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("""
+        <div style="background: rgba(0, 0, 30, 0.8); border: 2px solid #00aaff; border-radius: 15px; padding: 1.5rem;">
+            <h3 style="font-family: Orbitron; color: #00aaff; margin-bottom: 1rem;">🌐 BITNODE SYSTEM</h3>
+            <p style="color: #aaa; font-size: 0.9rem;">
+                • Analyzes Bitcoin network Tor nodes<br>
+                • Tracks percentage of Tor nodes<br>
+                • Signals based on Tor % changes<br>
+                • Market-wide sentiment indicator<br>
+                • Updates from bitnodes.io API
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("""
+        <div style="background: rgba(30, 0, 30, 0.8); border: 2px solid #ff00ff; border-radius: 15px; padding: 1.5rem;">
+            <h3 style="font-family: Orbitron; color: #ff00ff; margin-bottom: 1rem;">🧮 MATHEMATICAL SYSTEM</h3>
+            <p style="color: #aaa; font-size: 0.9rem;">
+                • Uses 8 mathematical equations<br>
+                • Analyzes order book data<br>
+                • Per-coin signals (11 coins)<br>
+                • Real-time price analysis<br>
+                • Signal strength 70-100%<br>
+                • Leverage: LOW or MAX only
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
     
     # Footer
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
     st.markdown("""
     <div style="text-align: center; color: #ff6666; padding: 2rem 1rem;">
-        <p style="font-family: Orbitron; font-size: 1rem;">🔥 GODZILLERS HYBRID CONFIRMATION BOT 🔥</p>
-        <p style="color: #aaa; font-size: 0.8rem;">Bitnode Analysis + 8 Mathematical Equations | 11 Specific Coins</p>
-        <p style="color: #666; font-size: 0.7rem;">BTC • ETH • SUI • LINK • SOL • XRP • TAO • ENA • ADA • DOGE • BRETT</p>
+        <p style="font-family: Orbitron; font-size: 1rem;">🔥 GODZILLERS INDEPENDENT SIGNAL SYSTEMS 🔥</p>
+        <p style="color: #aaa; font-size: 0.8rem;">Bitnode Market Analysis + Mathematical Equations | 11 Specific Coins</p>
+        <p style="color: #666; font-size: 0.7rem;">Each system shows its own signals independently | Confirmed when both agree</p>
     </div>
     """, unsafe_allow_html=True)
 
