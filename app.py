@@ -1,4 +1,4 @@
-# app.py - GODZILLERS MATHEMATICAL SIGNAL BOT
+# app.py - GODZILLERS MATHEMATICAL SIGNALS - CLEAN VERSION
 import streamlit as st
 import requests
 import pandas as pd
@@ -19,7 +19,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# GODZILLERS CSS with premium signal interface
+# GODZILLERS CSS - Clean Premium Design
 st.markdown("""
 <style>
     .main {
@@ -39,7 +39,7 @@ st.markdown("""
         font-family: 'Orbitron', monospace;
         font-weight: 900;
         text-align: center;
-        font-size: 4rem;
+        font-size: 3.5rem;
         margin-bottom: 0.5rem;
         text-shadow: 0 0 30px rgba(255, 0, 255, 0.7);
         letter-spacing: 3px;
@@ -49,175 +49,125 @@ st.markdown("""
         color: #ff66ff;
         font-family: 'Orbitron', monospace;
         text-align: center;
-        font-size: 1.4rem;
+        font-size: 1.2rem;
         margin-bottom: 2rem;
-        letter-spacing: 3px;
+        letter-spacing: 2px;
         text-transform: uppercase;
     }
     
-    /* PREMIUM SIGNAL CARDS */
-    .premium-buy-signal {
+    /* CLEAN SIGNAL CARDS */
+    .clean-buy-signal {
         background: linear-gradient(135deg, 
-            rgba(0, 255, 0, 0.1) 0%, 
-            rgba(0, 200, 0, 0.2) 25%, 
-            rgba(0, 150, 0, 0.3) 50%, 
-            rgba(0, 100, 0, 0.4) 75%, 
-            rgba(0, 50, 0, 0.5) 100%);
+            rgba(0, 255, 0, 0.05) 0%, 
+            rgba(0, 150, 0, 0.15) 100%);
         border: 3px solid #00ff00;
         border-radius: 20px;
         padding: 2rem;
         margin: 1.5rem 0;
-        box-shadow: 0 0 50px rgba(0, 255, 0, 0.4),
-                    inset 0 0 30px rgba(0, 255, 0, 0.1);
+        box-shadow: 0 0 40px rgba(0, 255, 0, 0.3),
+                    inset 0 0 20px rgba(0, 255, 0, 0.05);
         position: relative;
         overflow: hidden;
-        animation: pulse-green 3s infinite;
+        transition: all 0.3s ease;
     }
     
-    .premium-sell-signal {
+    .clean-buy-signal:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0 50px rgba(0, 255, 0, 0.4),
+                    inset 0 0 30px rgba(0, 255, 0, 0.1);
+    }
+    
+    .clean-sell-signal {
         background: linear-gradient(135deg, 
-            rgba(255, 0, 0, 0.1) 0%, 
-            rgba(200, 0, 0, 0.2) 25%, 
-            rgba(150, 0, 0, 0.3) 50%, 
-            rgba(100, 0, 0, 0.4) 75%, 
-            rgba(50, 0, 0, 0.5) 100%);
+            rgba(255, 0, 0, 0.05) 0%, 
+            rgba(150, 0, 0, 0.15) 100%);
         border: 3px solid #ff0000;
         border-radius: 20px;
         padding: 2rem;
         margin: 1.5rem 0;
-        box-shadow: 0 0 50px rgba(255, 0, 0, 0.4),
-                    inset 0 0 30px rgba(255, 0, 0, 0.1);
+        box-shadow: 0 0 40px rgba(255, 0, 0, 0.3),
+                    inset 0 0 20px rgba(255, 0, 0, 0.05);
         position: relative;
         overflow: hidden;
-        animation: pulse-red 3s infinite;
+        transition: all 0.3s ease;
     }
     
-    .premium-buy-signal::before,
-    .premium-sell-signal::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
-        opacity: 0.3;
-    }
-    
-    @keyframes pulse-green {
-        0% { box-shadow: 0 0 30px rgba(0, 255, 0, 0.4), inset 0 0 30px rgba(0, 255, 0, 0.1); }
-        50% { box-shadow: 0 0 60px rgba(0, 255, 0, 0.6), inset 0 0 40px rgba(0, 255, 0, 0.2); }
-        100% { box-shadow: 0 0 30px rgba(0, 255, 0, 0.4), inset 0 0 30px rgba(0, 255, 0, 0.1); }
-    }
-    
-    @keyframes pulse-red {
-        0% { box-shadow: 0 0 30px rgba(255, 0, 0, 0.4), inset 0 0 30px rgba(255, 0, 0, 0.1); }
-        50% { box-shadow: 0 0 60px rgba(255, 0, 0, 0.6), inset 0 0 40px rgba(255, 0, 0, 0.2); }
-        100% { box-shadow: 0 0 30px rgba(255, 0, 0, 0.4), inset 0 0 30px rgba(255, 0, 0, 0.1); }
+    .clean-sell-signal:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0 50px rgba(255, 0, 0, 0.4),
+                    inset 0 0 30px rgba(255, 0, 0, 0.1);
     }
     
     /* CONFIDENCE BADGES */
-    .confidence-95 {
+    .clean-confidence-95 {
         background: linear-gradient(90deg, #00ff00, #00cc00);
         color: #000;
         font-family: 'Orbitron', monospace;
         font-weight: 900;
-        padding: 0.4rem 1rem;
+        padding: 0.4rem 1.2rem;
         border-radius: 20px;
         font-size: 0.9rem;
         margin: 0.2rem;
         box-shadow: 0 0 15px rgba(0, 255, 0, 0.7);
         text-transform: uppercase;
+        letter-spacing: 1px;
     }
     
-    .confidence-90 {
+    .clean-confidence-90 {
         background: linear-gradient(90deg, #99ff00, #66cc00);
         color: #000;
         font-family: 'Orbitron', monospace;
         font-weight: 900;
-        padding: 0.4rem 1rem;
+        padding: 0.4rem 1.2rem;
         border-radius: 20px;
         font-size: 0.9rem;
         margin: 0.2rem;
         box-shadow: 0 0 15px rgba(153, 255, 0, 0.7);
         text-transform: uppercase;
+        letter-spacing: 1px;
     }
     
-    .confidence-85 {
+    .clean-confidence-85 {
         background: linear-gradient(90deg, #ffff00, #cccc00);
         color: #000;
         font-family: 'Orbitron', monospace;
         font-weight: 900;
-        padding: 0.4rem 1rem;
+        padding: 0.4rem 1.2rem;
         border-radius: 20px;
         font-size: 0.9rem;
         margin: 0.2rem;
         box-shadow: 0 0 15px rgba(255, 255, 0, 0.7);
         text-transform: uppercase;
+        letter-spacing: 1px;
     }
     
     /* LEVERAGE BADGES */
-    .leverage-max {
+    .clean-leverage-max {
         background: linear-gradient(90deg, #ff00ff, #cc00cc);
         color: #000;
         font-family: 'Orbitron', monospace;
         font-weight: 900;
-        padding: 0.4rem 1rem;
+        padding: 0.4rem 1.2rem;
         border-radius: 20px;
         font-size: 0.9rem;
         margin: 0.2rem;
         box-shadow: 0 0 15px rgba(255, 0, 255, 0.7);
         text-transform: uppercase;
+        letter-spacing: 1px;
     }
     
-    .leverage-low {
+    .clean-leverage-low {
         background: linear-gradient(90deg, #ff9900, #cc6600);
         color: #000;
         font-family: 'Orbitron', monospace;
         font-weight: 900;
-        padding: 0.4rem 1rem;
+        padding: 0.4rem 1.2rem;
         border-radius: 20px;
         font-size: 0.9rem;
         margin: 0.2rem;
         box-shadow: 0 0 15px rgba(255, 153, 0, 0.7);
         text-transform: uppercase;
-    }
-    
-    /* MATHEMATICAL BADGES */
-    .math-badge {
-        background: linear-gradient(90deg, #00ffff, #00cccc);
-        color: #000;
-        font-family: 'Orbitron', monospace;
-        font-weight: 900;
-        padding: 0.4rem 1rem;
-        border-radius: 20px;
-        font-size: 0.9rem;
-        margin: 0.2rem;
-        box-shadow: 0 0 15px rgba(0, 255, 255, 0.7);
-    }
-    
-    /* PREMIUM INDICATORS */
-    .premium-indicator {
-        background: rgba(0, 0, 0, 0.6);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 10px;
-        padding: 0.8rem;
-        margin: 0.3rem 0;
-        backdrop-filter: blur(10px);
-    }
-    
-    .indicator-label {
-        color: #aaa;
-        font-size: 0.8rem;
-        font-family: 'Rajdhani', sans-serif;
-        margin-bottom: 0.2rem;
-    }
-    
-    .indicator-value {
-        color: #fff;
-        font-size: 1rem;
-        font-family: 'Orbitron', monospace;
-        font-weight: 700;
+        letter-spacing: 1px;
     }
     
     /* LOGIN STYLES */
@@ -312,11 +262,11 @@ st.markdown("""
     
     .section-header {
         font-family: 'Orbitron', monospace;
-        font-size: 2.2rem;
+        font-size: 2rem;
         background: linear-gradient(90deg, #ff00ff 0%, #00ffff 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        margin: 2rem 0 1.5rem 0;
+        margin: 2rem 0 1rem 0;
         text-shadow: 0 0 20px rgba(255, 0, 255, 0.5);
         text-transform: uppercase;
         letter-spacing: 2px;
@@ -343,12 +293,24 @@ st.markdown("""
     footer {visibility: hidden;}
     header {visibility: hidden;}
     
-    /* RESPONSIVE GRID */
-    .signal-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-        gap: 1.5rem;
-        margin: 1.5rem 0;
+    /* SCAN BUTTON */
+    .scan-button {
+        background: linear-gradient(90deg, #ff00ff 0%, #00ffff 100%) !important;
+        color: #000 !important;
+        font-family: 'Orbitron' !important;
+        font-weight: 900 !important;
+        border: none !important;
+        border-radius: 15px !important;
+        padding: 0.75rem 2rem !important;
+        text-transform: uppercase !important;
+        letter-spacing: 1px !important;
+        font-size: 1rem !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    .scan-button:hover {
+        transform: scale(1.05) !important;
+        box-shadow: 0 0 30px rgba(255, 0, 255, 0.7) !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -525,14 +487,7 @@ class MathematicalEquations:
             'strength_pct': strength_pct,
             'leverage': leverage_indication,
             'max_leverage_value': round(max_leverage, 1),
-            'price': round(P_t, 4),
-            'signal_raw': round(signal_strength, 4),
-            'imbalance': round(I_t, 4),
-            'phi': round(phi_t, 6),
-            'sigma': round(sigma_t, 4),
-            'bid_volume': round(V_bid, 2),
-            'ask_volume': round(V_ask, 2),
-            'spread': round(S_t, 4)
+            'price': round(P_t, 4)
         }
 
 # ==================== MATHEMATICAL SIGNAL SYSTEM ====================
@@ -582,15 +537,6 @@ class MathematicalSignalSystem:
                     'max_leverage_value': math_signal['max_leverage_value'],
                     'price': math_signal['price'],
                     'current_price': current_price if current_price else math_signal['price'],
-                    'math_details': {
-                        'signal_raw': math_signal['signal_raw'],
-                        'imbalance': math_signal['imbalance'],
-                        'phi': math_signal['phi'],
-                        'sigma': math_signal['sigma'],
-                        'bid_volume': math_signal['bid_volume'],
-                        'ask_volume': math_signal['ask_volume'],
-                        'spread': math_signal['spread']
-                    },
                     'timestamp': datetime.now().isoformat()
                 }
                 high_confidence_signals.append(signal_data)
@@ -660,10 +606,7 @@ def login_page():
             username = st.text_input("👤 DRAGON NAME", placeholder="Enter your dragon name...")
             password = st.text_input("🔐 FIRE BREATH", type="password", placeholder="Enter your fire breath...")
             
-            login_button = st.form_submit_button("🔥 IGNITE DRAGON FIRE", use_container_width=True)
-            
-            if login_button:
-                if check_credentials(username, password):
+            login_button =if check_credentials(username, password):
                     st.session_state.logged_in = True
                     st.session_state.username = username
                     st.success("✅ Dragon fire ignited! Access granted.")
@@ -692,27 +635,27 @@ def get_coin_info(symbol):
 def get_confidence_badge(strength_pct):
     """Get confidence badge based on strength percentage"""
     if strength_pct >= 95:
-        return "confidence-95"
+        return "clean-confidence-95"
     elif strength_pct >= 90:
-        return "confidence-90"
+        return "clean-confidence-90"
     else:
-        return "confidence-85"
+        return "clean-confidence-85"
 
-def display_premium_signal(signal):
-    """Display premium mathematical signal with beautiful interface"""
+def display_clean_signal(signal):
+    """Display clean mathematical signal with beautiful interface"""
     coin_info = get_coin_info(signal['symbol'])
     
     # Signal container class
-    signal_class = "premium-buy-signal" if signal['direction'] == "BUY" else "premium-sell-signal"
+    signal_class = "clean-buy-signal" if signal['direction'] == "BUY" else "clean-sell-signal"
     
     # Confidence badge class
     confidence_class = get_confidence_badge(signal['strength_pct'])
     
     # Leverage badge class
-    leverage_class = "leverage-max" if "MAX" in signal['leverage'] else "leverage-low"
+    leverage_class = "clean-leverage-max" if "MAX" in signal['leverage'] else "clean-leverage-low"
     
     # Format price
-    price_formatted = f"${signal['price']:,.4f}"
+    price_formatted = f"${signal['price']:,.2f}"
     
     st.markdown(f'''
     <div class="{signal_class}">
@@ -722,14 +665,13 @@ def display_premium_signal(signal):
                 <h3 style="font-family: Orbitron; font-size: 1.8rem; margin: 0; color: {coin_info['color']};">
                     {coin_info['emoji']} {coin_info['name']}
                 </h3>
-                <p style="color: #aaa; font-size: 0.9rem; margin: 0.2rem 0;">{signal['symbol']} | 8 MATHEMATICAL EQUATIONS</p>
+                <p style="color: #aaa; font-size: 0.9rem; margin: 0.2rem 0;">{signal['symbol']}</p>
             </div>
             <div style="text-align: right;">
                 <p style="font-family: Orbitron; font-size: 2.5rem; font-weight: 900; margin: 0; 
                    color: {'#00ff00' if signal['direction'] == 'BUY' else '#ff0000'};">
                     {signal['direction']}
                 </p>
-                <p style="color: #ffd700; font-size: 0.9rem; margin: 0;">ACTION: {signal['direction']}</p>
             </div>
         </div>
         
@@ -747,47 +689,10 @@ def display_premium_signal(signal):
             </div>
         </div>
         
-        <!-- PRICE & METRICS -->
-        <div style="background: rgba(0, 0, 0, 0.4); border-radius: 15px; padding: 1.2rem; margin-bottom: 1.5rem;">
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
-                <div>
-                    <p class="indicator-label">CURRENT PRICE</p>
-                    <p class="indicator-value" style="color: {coin_info['color']};">{price_formatted}</p>
-                </div>
-                <div>
-                    <p class="indicator-label">MAX LEVERAGE</p>
-                    <p class="indicator-value" style="color: #ff00ff;">{signal['max_leverage_value']}x</p>
-                </div>
-            </div>
-        </div>
-        
-        <!-- MATHEMATICAL METRICS -->
-        <div style="background: rgba(0, 0, 0, 0.4); border-radius: 15px; padding: 1.2rem;">
-            <p class="indicator-label" style="text-align: center; margin-bottom: 0.8rem;">MATHEMATICAL METRICS</p>
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.8rem;">
-                <div class="premium-indicator">
-                    <p class="indicator-label">SIGNAL</p>
-                    <p class="indicator-value" style="color: #00ffff;">{signal['math_details']['signal_raw']:.4f}</p>
-                </div>
-                <div class="premium-indicator">
-                    <p class="indicator-label">IMBALANCE</p>
-                    <p class="indicator-value" style="color: {'#00ff00' if signal['math_details']['imbalance'] > 0 else '#ff0000'};">{signal['math_details']['imbalance']:.4f}</p>
-                </div>
-                <div class="premium-indicator">
-                    <p class="indicator-label">VOLATILITY</p>
-                    <p class="indicator-value" style="color: #ff9900;">{signal['math_details']['sigma']:.4f}</p>
-                </div>
-                <div class="premium-indicator">
-                    <p class="indicator-label">SPREAD</p>
-                    <p class="indicator-value" style="color: #ff66ff;">{signal['math_details']['spread']:.4f}</p>
-                </div>
-            </div>
-        </div>
-        
-        <!-- TIMESTAMP -->
-        <div style="text-align: center; margin-top: 1rem;">
-            <p style="color: #666; font-size: 0.7rem; font-family: Orbitron;">
-                GENERATED: {datetime.now().strftime("%H:%M:%S")} | 8 EQUATIONS ACTIVE
+        <!-- PRICE -->
+        <div style="text-align: center;">
+            <p style="color: {coin_info['color']}; font-family: Orbitron; font-size: 2rem; font-weight: 700; margin: 0;">
+                {price_formatted}
             </p>
         </div>
     </div>
@@ -815,12 +720,12 @@ def main_app():
     
     # GODZILLERS Header
     st.markdown('<h1 class="godzillers-header">🔥 GODZILLERS MATHEMATICAL SIGNALS</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="godzillers-subheader">HIGH CONFIDENCE ONLY | 8 EQUATIONS | BEAUTIFUL INTERFACE</p>', unsafe_allow_html=True)
+    st.markdown('<p class="godzillers-subheader">HIGH CONFIDENCE ONLY | 8 EQUATIONS | CLEAN INTERFACE</p>', unsafe_allow_html=True)
     
     # Scan button
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
     
-    col1, col2, col3 = st.columns([2, 1, 2])
+    col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         scan_button = st.button("✨ SCAN FOR HIGH CONFIDENCE SIGNALS", 
                               key="scan_math", 
@@ -850,10 +755,10 @@ def main_app():
         <div style="background: rgba(20, 0, 40, 0.7); border: 1px solid rgba(255, 0, 255, 0.3); 
                  border-radius: 10px; padding: 1rem; text-align: center; margin: 1rem 0;">
             <p style="color: #ff66ff; font-family: Orbitron; margin: 0.2rem 0; font-size: 1rem;">
-                Last scan: {scan_time} ({minutes_ago} minutes ago)
+                Last scan: {scan_time} • {minutes_ago} minutes ago
             </p>
             <p style="color: #00ffff; font-family: Orbitron; margin: 0.2rem 0; font-size: 0.9rem;">
-                11 coins analyzed | Only ≥85% confidence shown
+                11 coins analyzed • Only ≥85% confidence shown
             </p>
         </div>
         ''', unsafe_allow_html=True)
@@ -866,7 +771,7 @@ def main_app():
         
         # Display signals in a responsive grid
         for signal in st.session_state.signals:
-            display_premium_signal(signal)
+            display_clean_signal(signal)
     else:
         if st.session_state.last_scan:
             # No signals found
@@ -906,52 +811,18 @@ def main_app():
             has_signal = any(s['symbol'] == f"{symbol}USDT" for s in st.session_state.signals)
             
             status_color = "#00ff00" if has_signal else "#666666"
-            status_text = "ACTIVE SIGNAL" if has_signal else "MONITORING"
+            status_text = "✅ ACTIVE" if has_signal else "📡 MONITORING"
             
             st.markdown(f'''
             <div style="background: rgba(20, 0, 40, 0.7); border: 2px solid {color}; 
                      border-radius: 10px; padding: 1rem; text-align: center; margin-bottom: 0.5rem;">
                 <p style="font-family: Orbitron; color: {color}; margin: 0.2rem 0; font-size: 1.2rem;">{emoji} {name}</p>
                 <p style="color: {color}; font-size: 0.9rem; margin: 0;">{symbol}/USDT</p>
-                <div style="margin-top: 0.5rem; padding: 0.2rem 0.5rem; background: rgba{status_color}0.2; border-radius: 5px;">
-                    <p style="color: {status_color}; font-size: 0.7rem; font-family: Orbitron; margin: 0;">{status_text}</p>
+                <div style="margin-top: 0.5rem;">
+                    <p style="color: {status_color}; font-size: 0.8rem; font-family: Orbitron; margin: 0;">{status_text}</p>
                 </div>
             </div>
             ''', unsafe_allow_html=True)
-    
-    # Mathematical Equations Info
-    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-    st.markdown('<h2 class="section-header">🧮 MATHEMATICAL EQUATIONS</h2>', unsafe_allow_html=True)
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("""
-        <div style="background: rgba(0, 10, 20, 0.8); border: 2px solid #00ffff; border-radius: 15px; padding: 1.5rem;">
-            <h3 style="font-family: Orbitron; color: #00ffff; margin-bottom: 1rem;">🎯 HIGH CONFIDENCE ONLY</h3>
-            <p style="color: #aaa; font-size: 0.9rem;">
-                • Only signals with ≥85% confidence shown<br>
-                • 8 mathematical equations active<br>
-                • Real-time order book analysis<br>
-                • Volatility-adjusted signals<br>
-                • Order book imbalance detection
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown("""
-        <div style="background: rgba(10, 0, 20, 0.8); border: 2px solid #ff00ff; border-radius: 15px; padding: 1.5rem;">
-            <h3 style="font-family: Orbitron; color: #ff00ff; margin-bottom: 1rem;">⚡ SIGNAL CRITERIA</h3>
-            <p style="color: #aaa; font-size: 0.9rem;">
-                • Strength: 85-100% only<br>
-                • Leverage: LOW or MAX only<br>
-                • 11 specific coins monitored<br>
-                • Real-time price updates<br>
-                • Mathematical confirmation required
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
     
     # Footer
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
@@ -961,7 +832,7 @@ def main_app():
             🔥 GODZILLERS MATHEMATICAL SIGNALS 🔥
         </p>
         <p style="color: #aaa; font-size: 0.8rem; margin-bottom: 0.3rem;">
-            High Confidence Only | 8 Mathematical Equations | Premium Interface
+            High Confidence Only • 8 Mathematical Equations • Clean Interface
         </p>
         <p style="color: #666; font-size: 0.7rem;">
             BTC • ETH • SUI • LINK • SOL • XRP • TAO • ENA • ADA • DOGE • BRETT
