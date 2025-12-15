@@ -1,9 +1,4 @@
-# requirements.txt for GODZILLERS MATHEMATICAL SIGNALS BOT
-
 streamlit
-requests
 pandas
 numpy
-plotly
-ccxt
-python-dateutil
+requests
