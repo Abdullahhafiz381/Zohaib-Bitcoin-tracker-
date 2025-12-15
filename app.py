@@ -606,7 +606,10 @@ def login_page():
             username = st.text_input("👤 DRAGON NAME", placeholder="Enter your dragon name...")
             password = st.text_input("🔐 FIRE BREATH", type="password", placeholder="Enter your fire breath...")
             
-            login_button =if check_credentials(username, password):
+            login_button = st.form_submit_button("🔥 IGNITE DRAGON FIRE", use_container_width=True)
+            
+            if login_button:
+                if check_credentials(username, password):
                     st.session_state.logged_in = True
                     st.session_state.username = username
                     st.success("✅ Dragon fire ignited! Access granted.")
