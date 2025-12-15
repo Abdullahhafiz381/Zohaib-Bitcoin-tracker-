@@ -953,49 +953,6 @@ def main_app():
         </div>
         """, unsafe_allow_html=True)
     
-    # Live Equations Display
-    st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-    st.markdown('<h2 class="section-header">🔢 ACTIVE EQUATIONS</h2>', unsafe_allow_html=True)
-    
-    st.markdown("""
-    <div style="background: rgba(10, 0, 20, 0.9); border: 2px solid rgba(255, 0, 255, 0.5); border-radius: 15px; padding: 2rem;">
-        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
-            <div class="premium-indicator">
-                <p class="indicator-label">1. P_t = (Bid_t + Ask_t)/2</p>
-                <p class="indicator-value" style="color: #00ffff;">Mid Price</p>
-            </div>
-            <div class="premium-indicator">
-                <p class="indicator-label">2. V_t = Σ Volume_i</p>
-                <p class="indicator-value" style="color: #ff00ff;">Order Book Volume</p>
-            </div>
-            <div class="premium-indicator">
-                <p class="indicator-label">3. I_t = (V_bid - V_ask)/(V_bid + V_ask)</p>
-                <p class="indicator-value" style="color: #00ff00;">Imbalance</p>
-            </div>
-            <div class="premium-indicator">
-                <p class="indicator-label">4. S_t = Ask_t - Bid_t</p>
-                <p class="indicator-value" style="color: #ff9900;">Spread</p>
-            </div>
-            <div class="premium-indicator">
-                <p class="indicator-label">5. φ_t = S_t/P_t</p>
-                <p class="indicator-value" style="color: #ff66ff;">Relative Spread</p>
-            </div>
-            <div class="premium-indicator">
-                <p class="indicator-label">6. σ̂_t = StdDev(returns)</p>
-                <p class="indicator-value" style="color: #00ff99;">Volatility</p>
-            </div>
-            <div class="premium-indicator">
-                <p class="indicator-label">7. Signal_t = sign(I_t) × |I_t|/(φ_t × σ̂_t)</p>
-                <p class="indicator-value" style="color: #ff0000;">Signal Strength</p>
-            </div>
-            <div class="premium-indicator">
-                <p class="indicator-label">8. L_max = 1 + L₀/σ̂_t</p>
-                <p class="indicator-value" style="color: #ffff00;">Max Leverage</p>
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
     # Footer
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
     st.markdown("""
