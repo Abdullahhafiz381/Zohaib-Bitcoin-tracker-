@@ -2,651 +2,787 @@ import streamlit as st
 import requests
 import pandas as pd
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
+import json
+import plotly.graph_objects as go
+from scipy import stats
+import warnings
+warnings.filterwarnings('ignore')
 
 # ========== PAGE CONFIG ==========
 st.set_page_config(
-    page_title="🔥 GODZILLERS CRYPTO TRACKER",
-    page_icon="🐲",
+    page_title="🚀 CRYPTO QUANT SIGNAL PRO",
+    page_icon="📊",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
-# ========== GODZILLERS CSS ==========
+# ========== CUSTOM CSS ==========
 st.markdown("""
 <style>
     .main {
-        background: linear-gradient(135deg, #000000 0%, #1a0000 50%, #330000 100%);
-        color: white;
-        font-family: 'Arial', sans-serif;
+        background: #0f172a;
+        color: #f1f5f9;
     }
     
     .stApp {
-        background: linear-gradient(135deg, #000000 0%, #1a0000 50%, #330000 100%);
+        background: #0f172a;
     }
     
-    .godzillers-header {
-        background: linear-gradient(90deg, #ff0000 0%, #ff4444 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-family: 'Courier New', monospace;
-        font-weight: 900;
-        text-align: center;
-        font-size: 3.5rem;
-        margin-bottom: 0.5rem;
-        text-shadow: 0 0 20px rgba(255, 0, 0, 0.7);
-    }
-    
-    .godzillers-subheader {
-        color: #ff6666;
-        font-family: 'Courier New', monospace;
-        text-align: center;
-        font-size: 1.2rem;
+    .header-container {
+        background: linear-gradient(90deg, #1e293b 0%, #334155 100%);
+        padding: 2rem;
+        border-radius: 15px;
         margin-bottom: 2rem;
+        border: 1px solid #475569;
+    }
+    
+    .signal-card {
+        background: rgba(30, 41, 59, 0.8);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        border: 1px solid #475569;
+        backdrop-filter: blur(10px);
     }
     
     .signal-buy {
-        background: linear-gradient(135deg, rgba(0, 255, 0, 0.1) 0%, rgba(0, 100, 0, 0.3) 100%);
-        border: 2px solid #00ff00;
-        border-radius: 15px;
-        padding: 1.5rem;
-        margin: 1rem 0;
-        box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        border-left: 5px solid #10b981;
+        background: rgba(16, 185, 129, 0.1);
     }
     
     .signal-sell {
-        background: linear-gradient(135deg, rgba(255, 0, 0, 0.1) 0%, rgba(100, 0, 0, 0.3) 100%);
-        border: 2px solid #ff0000;
-        border-radius: 15px;
-        padding: 1.5rem;
-        margin: 1rem 0;
-        box-shadow: 0 0 20px rgba(255, 0, 0, 0.3);
+        border-left: 5px solid #ef4444;
+        background: rgba(239, 68, 68, 0.1);
     }
     
-    .signal-neutral {
-        background: linear-gradient(135deg, rgba(255, 165, 0, 0.1) 0%, rgba(100, 65, 0, 0.3) 100%);
-        border: 2px solid #ffa500;
-        border-radius: 15px;
-        padding: 1.5rem;
-        margin: 1rem 0;
-        box-shadow: 0 0 20px rgba(255, 165, 0, 0.3);
-    }
-    
-    .confirmed-signal {
-        background: linear-gradient(135deg, rgba(0, 255, 255, 0.1) 0%, rgba(0, 100, 100, 0.3) 100%);
-        border: 3px solid #00ffff;
-        border-radius: 15px;
-        padding: 2rem;
-        margin: 1rem 0;
-        box-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+    .signal-confirmed {
+        border: 2px solid #3b82f6;
         animation: pulse 2s infinite;
+        background: rgba(59, 130, 246, 0.15);
     }
     
     @keyframes pulse {
-        0% { box-shadow: 0 0 20px rgba(0, 255, 255, 0.5); }
-        50% { box-shadow: 0 0 40px rgba(0, 255, 255, 0.8); }
-        100% { box-shadow: 0 0 20px rgba(0, 255, 255, 0.5); }
+        0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
     }
     
-    .price-display {
-        background: rgba(0, 0, 0, 0.7);
-        border: 2px solid #ff0000;
-        border-radius: 15px;
+    .price-widget {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        border: 1px solid #475569;
+        border-radius: 12px;
         padding: 1.5rem;
-        margin: 1rem 0;
         text-align: center;
+    }
+    
+    .metric-box {
+        background: rgba(30, 41, 59, 0.6);
+        border-radius: 10px;
+        padding: 1rem;
+        border: 1px solid #475569;
     }
     
     .login-container {
         max-width: 400px;
         margin: 100px auto;
-        padding: 2rem;
-        background: rgba(20, 0, 0, 0.9);
-        border-radius: 15px;
-        border: 2px solid #ff0000;
+        padding: 2.5rem;
+        background: rgba(15, 23, 42, 0.95);
+        border-radius: 20px;
+        border: 1px solid #475569;
+        backdrop-filter: blur(10px);
     }
     
     .stButton > button {
-        background: linear-gradient(90deg, #ff0000, #cc0000);
-        color: white;
-        border: none;
+        width: 100%;
         border-radius: 8px;
-        padding: 0.75rem 1.5rem;
-        font-weight: bold;
+        font-weight: 600;
+        border: none;
     }
     
     .stButton > button:hover {
-        background: linear-gradient(90deg, #ff4444, #ff0000);
+        transform: translateY(-1px);
+        transition: all 0.3s ease;
     }
     
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
+    
+    .section-divider {
+        height: 1px;
+        background: linear-gradient(90deg, transparent, #475569, transparent);
+        margin: 2rem 0;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # ========== SESSION STATE ==========
-if 'logged_in' not in st.session_state:
-    st.session_state.logged_in = False
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
 if 'username' not in st.session_state:
-    st.session_state.username = None
+    st.session_state.username = ""
 if 'btc_price' not in st.session_state:
     st.session_state.btc_price = 0
-if 'bitnode_data' not in st.session_state:
-    st.session_state.bitnode_data = None
-if 'previous_bitnode' not in st.session_state:
-    st.session_state.previous_bitnode = None
+if 'bitnode_previous' not in st.session_state:
+    st.session_state.bitnode_previous = {'tor_percent': 15.5, 'onion_ratio': 32.0}
+if 'refresh_time' not in st.session_state:
+    st.session_state.refresh_time = datetime.now()
 if 'math_signals' not in st.session_state:
     st.session_state.math_signals = []
-if 'last_update' not in st.session_state:
-    st.session_state.last_update = datetime.now()
-if 'refresh_count' not in st.session_state:
-    st.session_state.refresh_count = 0
+if 'bitnode_signal' not in st.session_state:
+    st.session_state.bitnode_signal = {"direction": "HOLD", "strength": "NEUTRAL", "delta_tor": 0, "confirmed": False}
+if 'order_books' not in st.session_state:
+    st.session_state.order_books = {}
+if 'price_history' not in st.session_state:
+    st.session_state.price_history = {}
+
+# ========== API KEYS & CONFIG ==========
+BITNODES_API = "https://bitnodes.io/api/v1/snapshots/latest/"
+BINANCE_API = "https://api.binance.com/api/v3"
+COINGECKO_API = "https://api.coingecko.com/api/v3"
+
+# Trading pairs to analyze
+TRADING_PAIRS = [
+    "BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT",
+    "ADAUSDT", "AVAXUSDT", "DOTUSDT", "DOGEUSDT", "LINKUSDT",
+    "MATICUSDT", "SHIBUSDT", "TRXUSDT", "UNIUSDT", "ATOMUSDT"
+]
+
+# ========== REAL-TIME DATA FUNCTIONS ==========
+def get_binance_price(symbol="BTCUSDT"):
+    """Get real-time price from Binance"""
+    try:
+        response = requests.get(f"{BINANCE_API}/ticker/price", params={"symbol": symbol}, timeout=5)
+        if response.status_code == 200:
+            return float(response.json()['price'])
+    except:
+        pass
+    return None
+
+def get_binance_order_book(symbol="BTCUSDT", limit=100):
+    """Get real-time order book from Binance"""
+    try:
+        response = requests.get(f"{BINANCE_API}/depth", params={"symbol": symbol, "limit": limit}, timeout=5)
+        if response.status_code == 200:
+            return response.json()
+    except:
+        pass
+    return None
+
+def get_binance_klines(symbol="BTCUSDT", interval="5m", limit=100):
+    """Get price history for volatility calculation"""
+    try:
+        response = requests.get(f"{BINANCE_API}/klines", 
+                              params={"symbol": symbol, "interval": interval, "limit": limit}, 
+                              timeout=5)
+        if response.status_code == 200:
+            return response.json()
+    except:
+        pass
+    return None
+
+def get_bitnodes_data():
+    """Get real Bitnodes network data"""
+    try:
+        response = requests.get(BITNODES_API, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            
+            total_nodes = data.get('total_nodes', 15000)
+            nodes = data.get('nodes', {})
+            
+            # Initialize counters
+            tor_nodes = 0
+            onion_nodes = 0
+            
+            # Sample nodes for faster processing
+            sample_size = min(500, len(nodes))
+            if sample_size > 0:
+                sample = list(nodes.items())[:sample_size]
+                
+                for node_addr, node_info in sample:
+                    # Check address
+                    if '.onion' in str(node_addr).lower():
+                        onion_nodes += 1
+                        tor_nodes += 1
+                    elif 'tor' in str(node_addr).lower():
+                        tor_nodes += 1
+                    
+                    # Check user agent if available
+                    if isinstance(node_info, list) and len(node_info) > 7:
+                        user_agent = str(node_info[7]).lower()
+                        if '.onion' in user_agent:
+                            onion_nodes += 1
+                            tor_nodes += 1
+                        elif 'tor' in user_agent:
+                            tor_nodes += 1
+                
+                # Scale to total nodes
+                scale_factor = len(nodes) / sample_size
+                tor_nodes = int(tor_nodes * scale_factor)
+                onion_nodes = int(onion_nodes * scale_factor)
+            
+            return {
+                'total_nodes': total_nodes,
+                'tor_nodes': tor_nodes,
+                'onion_nodes': onion_nodes,
+                'tor_percent': (tor_nodes / total_nodes * 100) if total_nodes > 0 else 15.0,
+                'onion_ratio': (onion_nodes / tor_nodes * 100) if tor_nodes > 0 else 30.0,
+                'timestamp': datetime.now().isoformat()
+            }
+    except Exception as e:
+        pass
+    
+    # Return realistic fallback data
+    return {
+        'total_nodes': 15000,
+        'tor_nodes': 2325,
+        'onion_nodes': 697,
+        'tor_percent': 15.5,
+        'onion_ratio': 30.0,
+        'timestamp': datetime.now().isoformat()
+    }
+
+# ========== SIGNAL ENGINE 1: BITNODE NETWORK ANALYSIS ==========
+def calculate_bitnode_signal():
+    """Calculate Bitnode signal using real-time data"""
+    # Get current data
+    current_data = get_bitnodes_data()
+    
+    # Get previous data
+    previous_data = st.session_state.bitnode_previous
+    
+    # Calculate changes
+    delta_tor = current_data['tor_percent'] - previous_data['tor_percent']
+    delta_onion = current_data['onion_ratio'] - previous_data['onion_ratio']
+    
+    # Onion confirmation
+    onion_confirmed = (np.sign(delta_onion) == np.sign(delta_tor))
+    
+    # Store current as previous
+    st.session_state.bitnode_previous = {
+        'tor_percent': current_data['tor_percent'],
+        'onion_ratio': current_data['onion_ratio']
+    }
+    
+    # Generate signal
+    if delta_tor > 0.5:
+        direction = "SELL"
+        strength = "STRONG_BEARISH"
+        confirmed = onion_confirmed
+    elif delta_tor > 0.1:
+        direction = "SELL"
+        strength = "MODERATE_BEARISH"
+        confirmed = onion_confirmed
+    elif delta_tor < -0.5:
+        direction = "BUY"
+        strength = "STRONG_BULLISH"
+        confirmed = onion_confirmed
+    elif delta_tor < -0.1:
+        direction = "BUY"
+        strength = "MODERATE_BULLISH"
+        confirmed = onion_confirmed
+    else:
+        direction = "HOLD"
+        strength = "NEUTRAL"
+        confirmed = False
+    
+    return {
+        "direction": direction,
+        "strength": strength,
+        "delta_tor": delta_tor,
+        "confirmed": confirmed,
+        "tor_percent": current_data['tor_percent'],
+        "onion_ratio": current_data['onion_ratio']
+    }
+
+# ========== SIGNAL ENGINE 2: MATHEMATICAL ORDER BOOK ANALYSIS ==========
+def calculate_volume_imbalance(bids, asks, levels=10):
+    """Calculate volume imbalance"""
+    if not bids or not asks:
+        return 0
+    
+    # Sum volumes for top levels
+    bid_volume = sum(float(bid[1]) for bid in bids[:levels])
+    ask_volume = sum(float(ask[1]) for ask in asks[:levels])
+    
+    # Calculate imbalance
+    if bid_volume + ask_volume > 0:
+        return (bid_volume - ask_volume) / (bid_volume + ask_volume)
+    return 0
+
+def calculate_spread(bids, asks):
+    """Calculate spread percentage"""
+    if not bids or not asks:
+        return 0
+    
+    best_bid = float(bids[0][0])
+    best_ask = float(asks[0][0])
+    mid_price = (best_bid + best_ask) / 2
+    
+    if mid_price > 0:
+        return (best_ask - best_bid) / mid_price * 100
+    return 0
+
+def calculate_volatility(klines):
+    """Calculate price volatility"""
+    if not klines or len(klines) < 2:
+        return 0.01
+    
+    try:
+        # Extract closing prices
+        closes = [float(k[4]) for k in klines]
+        
+        # Calculate logarithmic returns
+        returns = np.log(np.array(closes[1:]) / np.array(closes[:-1]))
+        
+        # Return annualized volatility (assuming 5-min intervals)
+        return np.std(returns) * np.sqrt(365 * 24 * 12)  # 12 * 5-min periods per hour
+    except:
+        return 0.01
+
+def calculate_mathematical_signal(symbol):
+    """Calculate mathematical signal for a trading pair"""
+    try:
+        # Get order book
+        order_book = get_binance_order_book(symbol)
+        if not order_book:
+            return None
+        
+        bids = order_book.get('bids', [])
+        asks = order_book.get('asks', [])
+        
+        if not bids or not asks:
+            return None
+        
+        # Get price history for volatility
+        klines = get_binance_klines(symbol)
+        
+        # Calculate metrics
+        best_bid = float(bids[0][0])
+        best_ask = float(asks[0][0])
+        mid_price = (best_bid + best_ask) / 2
+        
+        # Volume imbalance (I)
+        I = calculate_volume_imbalance(bids, asks, levels=10)
+        
+        # Spread (S)
+        S = best_ask - best_bid
+        
+        # Spread ratio (φ)
+        phi = S / mid_price if mid_price > 0 else 0.001
+        
+        # Volatility (σ)
+        sigma = calculate_volatility(klines)
+        
+        # Signal calculation
+        if phi * sigma > 0:
+            signal_value = np.sign(I) * (abs(I) / (phi * sigma))
+        else:
+            signal_value = 0
+        
+        # Determine direction
+        if I > phi * 1.2:  # Added threshold buffer
+            direction = "BUY"
+        elif I < -phi * 1.2:
+            direction = "SELL"
+        else:
+            direction = "HOLD"
+        
+        # Calculate strength
+        strength_pct = min(99, abs(signal_value) * 100)
+        
+        # Only return signals with significant strength
+        if direction != "HOLD" and strength_pct > 20:
+            return {
+                'symbol': symbol,
+                'direction': direction,
+                'strength': round(strength_pct, 1),
+                'price': mid_price,
+                'signal_value': signal_value,
+                'imbalance': I,
+                'spread': phi,
+                'volatility': sigma
+            }
+    
+    except Exception as e:
+        pass
+    
+    return None
+
+def calculate_all_mathematical_signals():
+    """Calculate signals for all trading pairs"""
+    signals = []
+    
+    for symbol in TRADING_PAIRS:
+        signal = calculate_mathematical_signal(symbol)
+        if signal:
+            signals.append(signal)
+    
+    # Sort by strength and return top 5
+    signals.sort(key=lambda x: x['strength'], reverse=True)
+    return signals[:5]
+
+# ========== CONFIRMATION LOGIC ==========
+def check_signal_confirmation(bitnode_signal, math_signals):
+    """Check if signals confirm each other"""
+    if not math_signals:
+        return False, None, 0
+    
+    bitnode_direction = bitnode_signal['direction']
+    
+    # Check if any math signal confirms
+    confirmed_signals = []
+    for math_signal in math_signals:
+        if math_signal['direction'] == bitnode_direction:
+            confirmed_signals.append(math_signal)
+    
+    if confirmed_signals:
+        # Use strongest confirming signal
+        best_signal = max(confirmed_signals, key=lambda x: x['strength'])
+        
+        # Calculate confidence score
+        if bitnode_signal['confirmed']:
+            confidence = 99
+        else:
+            confidence = min(95, 70 + (best_signal['strength'] * 0.3))
+        
+        return True, best_signal, confidence
+    
+    return False, None, 0
+
+# ========== TRADING METRICS ==========
+def calculate_trading_metrics(signals):
+    """Calculate advanced trading metrics"""
+    if not signals:
+        return {}
+    
+    metrics = {
+        'total_signals': len(signals),
+        'buy_signals': sum(1 for s in signals if s['direction'] == 'BUY'),
+        'sell_signals': sum(1 for s in signals if s['direction'] == 'SELL'),
+        'avg_strength': np.mean([s['strength'] for s in signals]) if signals else 0,
+        'max_strength': max([s['strength'] for s in signals]) if signals else 0,
+        'signal_consistency': None
+    }
+    
+    # Calculate consistency
+    if metrics['total_signals'] > 1:
+        directions = [1 if s['direction'] == 'BUY' else -1 for s in signals]
+        metrics['signal_consistency'] = np.mean(directions) * 100
+    
+    return metrics
+
+# ========== DATA REFRESH ==========
+def refresh_all_data():
+    """Refresh all data sources"""
+    with st.spinner("🔄 Updating market data..."):
+        # Get BTC price
+        btc_price = get_binance_price("BTCUSDT")
+        if btc_price:
+            st.session_state.btc_price = btc_price
+        
+        # Calculate Bitnode signal
+        st.session_state.bitnode_signal = calculate_bitnode_signal()
+        
+        # Calculate mathematical signals
+        st.session_state.math_signals = calculate_all_mathematical_signals()
+        
+        # Update timestamp
+        st.session_state.refresh_time = datetime.now()
+        
+        time.sleep(1)
 
 # ========== LOGIN SYSTEM ==========
-def login_page():
-    """Simple login page"""
+def login_system():
+    """Professional login system"""
     col1, col2, col3 = st.columns([1, 2, 1])
     
     with col2:
         st.markdown("""
         <div class="login-container">
-            <h1 style="text-align: center; color: #ff0000; font-family: 'Courier New'; margin-bottom: 1rem;">🐲 GODZILLERS</h1>
-            <p style="text-align: center; color: #ff6666; margin-bottom: 2rem;">PRIVATE CRYPTO TRACKER</p>
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <h1 style="color: #3b82f6; font-size: 2.5rem; margin-bottom: 0.5rem;">🚀</h1>
+                <h2 style="color: #f1f5f9; margin-bottom: 0.5rem;">CRYPTO QUANT SIGNAL PRO</h2>
+                <p style="color: #94a3b8; font-size: 0.9rem;">Professional Trading Signal System</p>
+            </div>
         </div>
         """, unsafe_allow_html=True)
         
         with st.form("login_form"):
-            username = st.text_input("Username", placeholder="Enter username...")
-            password = st.text_input("Password", type="password", placeholder="Enter password...")
+            username = st.text_input("Username", placeholder="Enter username")
+            password = st.text_input("Password", type="password", placeholder="Enter password")
             
-            submit = st.form_submit_button("LOGIN", use_container_width=True)
+            col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
+            with col_btn2:
+                login_btn = st.form_submit_button("🔐 Login", use_container_width=True)
             
-            if submit:
-                # Simple hardcoded credentials
-                if (username == "admin" and password == "password123") or \
-                   (username == "godziller" and password == "dragonfire"):
-                    st.session_state.logged_in = True
+            if login_btn:
+                # Simple authentication
+                if (username == "trader" and password == "quant2025") or \
+                   (username == "admin" and password == "admin123"):
+                    st.session_state.authenticated = True
                     st.session_state.username = username
+                    
+                    # Initialize data on first login
+                    if st.session_state.btc_price == 0:
+                        btc_price = get_binance_price("BTCUSDT")
+                        if btc_price:
+                            st.session_state.btc_price = btc_price
+                    
                     st.rerun()
                 else:
-                    st.error("Invalid credentials. Try: admin / password123")
-
-# ========== REAL DATA FUNCTIONS ==========
-def get_btc_price():
-    """Get real BTC price from Binance"""
-    try:
-        url = "https://api.binance.com/api/v3/ticker/price"
-        params = {"symbol": "BTCUSDT"}
-        response = requests.get(url, params=params, timeout=5)
-        if response.status_code == 200:
-            data = response.json()
-            price = float(data['price'])
-            st.session_state.btc_price = price
-            return price
-    except:
-        pass
-    
-    # Fallback to CoinGecko if Binance fails
-    try:
-        url = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
-        response = requests.get(url, timeout=5)
-        if response.status_code == 200:
-            data = response.json()
-            price = float(data['bitcoin']['usd'])
-            st.session_state.btc_price = price
-            return price
-    except:
-        pass
-    
-    # Return cached price or default
-    return st.session_state.btc_price if st.session_state.btc_price > 0 else 65000
-
-def get_eth_price():
-    """Get real ETH price"""
-    try:
-        url = "https://api.binance.com/api/v3/ticker/price"
-        params = {"symbol": "ETHUSDT"}
-        response = requests.get(url, params=params, timeout=5)
-        if response.status_code == 200:
-            data = response.json()
-            return float(data['price'])
-    except:
-        pass
-    
-    return 3500  # Default ETH price
-
-def get_bitnodes_data():
-    """Get real Bitnodes data"""
-    try:
-        response = requests.get("https://bitnodes.io/api/v1/snapshots/latest/", timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            
-            # Initialize counters
-            total_nodes = data.get('total_nodes', 15000)
-            nodes = data.get('nodes', {})
-            
-            # Count Tor and Onion nodes
-            tor_count = 0
-            onion_count = 0
-            
-            # Sample nodes for faster processing
-            sample_nodes = list(nodes.items())[:200] if len(nodes) > 200 else list(nodes.items())
-            
-            for node_addr, node_info in sample_nodes:
-                # Check address for .onion
-                if '.onion' in str(node_addr).lower():
-                    onion_count += 1
-                    tor_count += 1
-                elif 'tor' in str(node_addr).lower():
-                    tor_count += 1
-                
-                # Check user agent
-                if isinstance(node_info, list) and len(node_info) > 7:
-                    user_agent = str(node_info[7]).lower()
-                    if '.onion' in user_agent and node_addr not in str(node_addr).lower():
-                        onion_count += 1
-                        tor_count += 1
-                    elif 'tor' in user_agent and 'tor' not in str(node_addr).lower():
-                        tor_count += 1
-            
-            # Scale up based on sample
-            if len(sample_nodes) > 0 and len(nodes) > 0:
-                scale = len(nodes) / len(sample_nodes)
-                tor_count = int(tor_count * scale)
-                onion_count = int(onion_count * scale)
-            
-            return {
-                'timestamp': datetime.now().isoformat(),
-                'total_nodes': total_nodes,
-                'tor_nodes': tor_count,
-                'onion_nodes': onion_count,
-                'tor_percent': (tor_count / total_nodes * 100) if total_nodes > 0 else 0,
-                'onion_ratio': (onion_count / tor_count * 100) if tor_count > 0 else 0
-            }
-    except Exception as e:
-        # Return realistic fallback data
-        return {
-            'timestamp': datetime.now().isoformat(),
-            'total_nodes': 15000,
-            'tor_nodes': 2250,
-            'onion_nodes': 675,
-            'tor_percent': 15.0,
-            'onion_ratio': 30.0
-        }
-
-def get_binance_orderbook(pair="BTCUSDT", limit=20):
-    """Get real Binance order book data"""
-    try:
-        url = f"https://api.binance.com/api/v3/depth"
-        params = {"symbol": pair, "limit": limit}
-        response = requests.get(url, params=params, timeout=5)
-        if response.status_code == 200:
-            return response.json()
-    except:
-        pass
-    return None
-
-def get_price_history(pair="BTCUSDT"):
-    """Get price history for volatility calculation"""
-    try:
-        url = f"https://api.binance.com/api/v3/klines"
-        params = {"symbol": pair, "interval": "5m", "limit": 20}
-        response = requests.get(url, params=params, timeout=5)
-        if response.status_code == 200:
-            return response.json()
-    except:
-        pass
-    return None
-
-# ========== YOUR SIGNAL FORMULAS ==========
-def calculate_bitnode_signal():
-    """YOUR BITNODE FORMULA"""
-    # Get current data
-    current_data = get_bitnodes_data()
-    
-    # Store previous data if exists
-    if st.session_state.bitnode_data:
-        st.session_state.previous_bitnode = st.session_state.bitnode_data
-    
-    # Store current
-    st.session_state.bitnode_data = current_data
-    
-    # Calculate signal
-    if st.session_state.previous_bitnode:
-        # Get current values
-        current_tor = current_data['tor_percent']
-        current_onion = current_data['onion_ratio']
-        
-        # Get previous values
-        previous_tor = st.session_state.previous_bitnode['tor_percent']
-        previous_onion = st.session_state.previous_bitnode['onion_ratio']
-        
-        # Calculate changes
-        delta_tor = current_tor - previous_tor
-        delta_onion = current_onion - previous_onion
-        
-        # Onion confirmation
-        onion_confirmed = (np.sign(delta_onion) == np.sign(delta_tor))
-        
-        # Generate signal
-        if delta_tor > 0.5 and onion_confirmed:
-            direction = "🐲 GODZILLA DUMP 🐲"
-            strength = "EXTREME_CONFIRMED"
-            bias = "EXTREME_BEARISH"
-        elif delta_tor > 0.1:
-            direction = "🔥 STRONG SELL 🔥"
-            strength = "STRONG"
-            bias = "VERY_BEARISH"
-        elif delta_tor < -0.5 and onion_confirmed:
-            direction = "🐲 GODZILLA PUMP 🐲"
-            strength = "EXTREME_CONFIRMED"
-            bias = "EXTREME_BULLISH"
-        elif delta_tor < -0.1:
-            direction = "🚀 STRONG BUY 🚀"
-            strength = "STRONG"
-            bias = "VERY_BULLISH"
-        else:
-            direction = "HOLD"
-            strength = "NEUTRAL"
-            bias = "NEUTRAL"
-        
-        return {
-            'direction': direction,
-            'strength': strength,
-            'bias': bias,
-            'delta_tor': delta_tor,
-            'confirmed': onion_confirmed
-        }
-    
-    # First run - no previous data
-    return {
-        'direction': "HOLD",
-        'strength': "INITIALIZING",
-        'bias': "NEUTRAL",
-        'delta_tor': 0,
-        'confirmed': False
-    }
-
-def calculate_mathematical_signal(pair="BTCUSDT"):
-    """YOUR MATHEMATICAL FORMULA"""
-    try:
-        # Get order book
-        orderbook = get_binance_orderbook(pair)
-        if not orderbook:
-            return None
-        
-        # Get price history for volatility
-        klines = get_price_history(pair)
-        
-        # Extract data
-        bids = orderbook.get('bids', [])
-        asks = orderbook.get('asks', [])
-        
-        if not bids or not asks:
-            return None
-        
-        # Calculate P = (Bid + Ask) / 2
-        bid_price = float(bids[0][0])
-        ask_price = float(asks[0][0])
-        P = (bid_price + ask_price) / 2
-        
-        # Calculate I = (V_bid - V_ask) / (V_bid + V_ask)
-        # Use top 10 levels
-        v_bid = sum(float(b[1]) for b in bids[:10])
-        v_ask = sum(float(a[1]) for a in asks[:10])
-        I = (v_bid - v_ask) / (v_bid + v_ask) if (v_bid + v_ask) > 0 else 0
-        
-        # Calculate S = Ask - Bid
-        S = ask_price - bid_price
-        
-        # Calculate φ = S / P
-        phi = S / P if P > 0 else 0.001
-        
-        # Calculate σ (volatility)
-        if klines and len(klines) >= 2:
-            closes = [float(k[4]) for k in klines]  # Close prices
-            returns = np.diff(np.log(closes))
-            sigma = np.std(returns) if len(returns) > 0 else 0.001
-        else:
-            sigma = 0.001
-        
-        # Signal = sign(I) × ( |I| / (φ × σ) )
-        if phi * sigma > 0:
-            signal = np.sign(I) * (abs(I) / (phi * sigma))
-        else:
-            signal = 0
-        
-        # Determine direction
-        if I > phi:
-            direction = "BUY"
-        elif I < -phi:
-            direction = "SELL"
-        else:
-            direction = "HOLD"
-        
-        # Strength percentage
-        strength_pct = min(99, abs(signal) * 100)
-        
-        return {
-            'pair': pair.replace('USDT', ''),
-            'direction': direction,
-            'strength': round(strength_pct, 1),
-            'signal_value': signal,
-            'price': P
-        }
-        
-    except Exception as e:
-        return None
-
-def calculate_all_mathematical_signals():
-    """Calculate signals for top pairs"""
-    pairs = ["BTCUSDT", "ETHUSDT"]  # Only analyze BTC and ETH
-    signals = []
-    
-    for pair in pairs:
-        signal = calculate_mathematical_signal(pair)
-        if signal and signal['direction'] != "HOLD" and signal['strength'] > 15:
-            signals.append(signal)
-    
-    # Sort by strength
-    signals.sort(key=lambda x: x['strength'], reverse=True)
-    return signals[:2]  # Return only top 2
-
-def check_confirmation(bitnode_signal, math_signals):
-    """Check if both signals agree"""
-    if not math_signals:
-        return False, None
-    
-    # Map Bitnode to BUY/SELL
-    bitnode_dir = bitnode_signal['direction']
-    bitnode_action = None
-    
-    if "BUY" in bitnode_dir or "PUMP" in bitnode_dir:
-        bitnode_action = "BUY"
-    elif "SELL" in bitnode_dir or "DUMP" in bitnode_dir:
-        bitnode_action = "SELL"
-    
-    # Check if top math signal agrees
-    top_math = math_signals[0]
-    
-    if bitnode_action and bitnode_action == top_math['direction']:
-        return True, bitnode_action
-    
-    return False, None
-
-def refresh_data():
-    """Update all data"""
-    with st.spinner("Updating data..."):
-        # Get BTC price
-        st.session_state.btc_price = get_btc_price()
-        
-        # Get ETH price
-        st.session_state.eth_price = get_eth_price()
-        
-        # Calculate signals
-        st.session_state.bitnode_signal = calculate_bitnode_signal()
-        st.session_state.math_signals = calculate_all_mathematical_signals()
-        
-        # Update timestamp
-        st.session_state.last_update = datetime.now()
-        st.session_state.refresh_count += 1
-        
-        time.sleep(0.5)
+                    st.error("Invalid credentials. Try: trader / quant2025")
 
 # ========== MAIN DASHBOARD ==========
 def main_dashboard():
-    """Main dashboard after login"""
-    # Header with logout
-    col1, col2, col3 = st.columns([4, 2, 1])
+    """Main trading dashboard"""
+    
+    # Header
+    col1, col2, col3 = st.columns([2, 1, 1])
     with col1:
-        st.markdown('<h1 class="godzillers-header">🔥 GODZILLERS CRYPTO TRACKER</h1>', unsafe_allow_html=True)
-        st.markdown('<p class="godzillers-subheader">DUAL-ENGINE SIGNAL SYSTEM • REAL-TIME DATA</p>', unsafe_allow_html=True)
+        st.markdown("""
+        <div class="header-container">
+            <h1 style="color: #f1f5f9; margin-bottom: 0.5rem;">🚀 CRYPTO QUANT SIGNAL PRO</h1>
+            <p style="color: #94a3b8; margin: 0;">Real-time Trading Signals • Dual-Engine Analysis • Professional Grade</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col3:
-        if st.button("LOGOUT", use_container_width=True):
-            st.session_state.logged_in = False
-            st.session_state.username = None
+        if st.button("👤 Logout", use_container_width=True):
+            st.session_state.authenticated = False
             st.rerun()
     
-    # Refresh button
-    st.markdown("---")
-    col_refresh1, col_refresh2, col_refresh3 = st.columns([1, 2, 1])
-    with col_refresh2:
-        if st.button("🔄 GENERATE NEW SIGNALS", use_container_width=True, type="primary"):
-            refresh_data()
+    # Control Panel
+    st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+    
+    col_control1, col_control2, col_control3, col_control4 = st.columns(4)
+    
+    with col_control1:
+        if st.button("🔄 Refresh Signals", use_container_width=True):
+            refresh_all_data()
             st.rerun()
     
-    # Display prices
-    st.markdown("---")
-    col_price1, col_price2 = st.columns(2)
-    
-    with col_price1:
-        btc_price = get_btc_price()
-        st.markdown(f'''
-        <div class="price-display">
-            <h3 style="color: #ff4444; margin-bottom: 0.5rem;">₿ BITCOIN</h3>
-            <h2 style="color: #ffffff; margin: 0;">${btc_price:,.2f}</h2>
-            <p style="color: #ff8888; margin-top: 0.5rem;">Live Price</p>
+    with col_control2:
+        st.markdown(f"""
+        <div class="price-widget">
+            <div style="color: #94a3b8; font-size: 0.9rem;">BTC PRICE</div>
+            <div style="color: #f1f5f9; font-size: 1.8rem; font-weight: 600;">${st.session_state.btc_price:,.2f}</div>
         </div>
-        ''', unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
-    with col_price2:
-        eth_price = get_eth_price()
-        st.markdown(f'''
-        <div class="price-display">
-            <h3 style="color: #ff4444; margin-bottom: 0.5rem;">Ξ ETHEREUM</h3>
-            <h2 style="color: #ffffff; margin: 0;">${eth_price:,.2f}</h2>
-            <p style="color: #ff8888; margin-top: 0.5rem;">Live Price</p>
-        </div>
-        ''', unsafe_allow_html=True)
+    with col_control3:
+        last_update = st.session_state.refresh_time.strftime("%H:%M:%S")
+        st.metric("Last Update", last_update)
     
-    # Initialize signals if not exists
-    if 'bitnode_signal' not in st.session_state:
-        st.session_state.bitnode_signal = calculate_bitnode_signal()
-    if 'math_signals' not in st.session_state:
-        st.session_state.math_signals = calculate_all_mathematical_signals()
+    with col_control4:
+        total_signals = len(st.session_state.math_signals)
+        st.metric("Active Signals", total_signals)
     
-    # Check for confirmation
-    confirmed, direction = check_confirmation(
+    # Check for confirmed signals
+    confirmed, best_signal, confidence = check_signal_confirmation(
         st.session_state.bitnode_signal, 
         st.session_state.math_signals
     )
     
     # Display confirmed signal if exists
-    if confirmed:
-        st.markdown("---")
-        if direction == "BUY":
-            signal_text = "🐲 CONFIRMED GODZILLA PUMP SIGNAL 🐲"
-            signal_class = "confirmed-signal"
-            confidence = "99% CONFIRMATION"
-            explanation = "BITNODE + MATHEMATICAL SIGNALS ALIGNED FOR BUY"
-        else:
-            signal_text = "🐲 CONFIRMED GODZILLA DUMP SIGNAL 🐲"
-            signal_class = "confirmed-signal"
-            confidence = "99% CONFIRMATION"
-            explanation = "BITNODE + MATHEMATICAL SIGNALS ALIGNED FOR SELL"
+    if confirmed and best_signal and confidence >= 85:
+        st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
         
-        st.markdown(f'''
+        if best_signal['direction'] == "BUY":
+            signal_class = "signal-card signal-confirmed signal-buy"
+            signal_icon = "📈"
+            action = "LONG"
+        else:
+            signal_class = "signal-card signal-confirmed signal-sell"
+            signal_icon = "📉"
+            action = "SHORT"
+        
+        st.markdown(f"""
         <div class="{signal_class}">
-            <h2 style="text-align: center; color: #00ffff; margin-bottom: 1rem;">{signal_text}</h2>
-            <h3 style="text-align: center; color: #ffffff; margin-bottom: 0.5rem;">{confidence}</h3>
-            <p style="text-align: center; color: #ff8888;">{explanation}</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <div>
+                    <h3 style="color: #f1f5f9; margin: 0;">{signal_icon} CONFIRMED TRADING SIGNAL</h3>
+                    <p style="color: #94a3b8; margin: 0.2rem 0;">Dual-engine confirmation detected</p>
+                </div>
+                <div style="background: #3b82f6; color: white; padding: 0.5rem 1rem; border-radius: 20px; font-weight: 600;">
+                    {confidence}% CONFIDENCE
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 1rem;">
+                <div class="metric-box">
+                    <div style="color: #94a3b8; font-size: 0.8rem;">ACTION</div>
+                    <div style="color: #f1f5f9; font-size: 1.2rem; font-weight: 600;">{action}</div>
+                </div>
+                <div class="metric-box">
+                    <div style="color: #94a3b8; font-size: 0.8rem;">PAIR</div>
+                    <div style="color: #f1f5f9; font-size: 1.2rem; font-weight: 600;">{best_signal['symbol']}</div>
+                </div>
+                <div class="metric-box">
+                    <div style="color: #94a3b8; font-size: 0.8rem;">STRENGTH</div>
+                    <div style="color: #f1f5f9; font-size: 1.2rem; font-weight: 600;">{best_signal['strength']}%</div>
+                </div>
+                <div class="metric-box">
+                    <div style="color: #94a3b8; font-size: 0.8rem;">PRICE</div>
+                    <div style="color: #f1f5f9; font-size: 1.2rem; font-weight: 600;">${best_signal['price']:,.2f}</div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 1rem; padding: 1rem; background: rgba(15, 23, 42, 0.5); border-radius: 8px;">
+                <p style="color: #94a3b8; margin: 0; font-size: 0.9rem;">
+                    📊 <strong>Signal Details:</strong> Bitnode network confirms {best_signal['direction']} bias with {st.session_state.bitnode_signal['strength'].replace('_', ' ').lower()} strength. 
+                    Order book analysis shows {best_signal['direction']} signal with {best_signal['strength']}% strength.
+                </p>
+            </div>
         </div>
-        ''', unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
-    # Display Bitnode Signal
-    st.markdown("---")
-    st.markdown("### 🌐 BITNODE NETWORK SIGNAL")
-    
-    bitnode_signal = st.session_state.bitnode_signal
-    signal_class = "signal-neutral"
-    
-    if "SELL" in bitnode_signal['direction']:
-        signal_class = "signal-sell"
-    elif "BUY" in bitnode_signal['direction']:
-        signal_class = "signal-buy"
-    
-    st.markdown(f'''
-    <div class="{signal_class}">
-        <h3 style="text-align: center; margin-bottom: 0.5rem;">{bitnode_signal['direction']}</h3>
-        <p style="text-align: center; color: #ffffff;">Strength: {bitnode_signal['strength']}</p>
-        <p style="text-align: center; color: #ff8888;">Bias: {bitnode_signal['bias']}</p>
-    </div>
-    ''', unsafe_allow_html=True)
-    
-    # Display Mathematical Signals
-    st.markdown("---")
-    st.markdown("### 🧮 MATHEMATICAL SIGNALS")
+    # Mathematical Signals Table
+    st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+    st.markdown("### 📊 MATHEMATICAL SIGNALS (Order Book Analysis)")
     
     math_signals = st.session_state.math_signals
     if math_signals:
-        # Create table
+        # Create DataFrame
         data = []
         for signal in math_signals:
-            arrow = "🟢" if signal['direction'] == "BUY" else "🔴"
             data.append({
-                "Pair": f"{signal['pair']}/USDT",
-                "Signal": f"{arrow} {signal['direction']}",
-                "Strength": f"{signal['strength']}%"
+                "Pair": signal['symbol'],
+                "Signal": f"{'🟢 BUY' if signal['direction'] == 'BUY' else '🔴 SELL'}",
+                "Strength": signal['strength'],
+                "Price": f"${signal['price']:,.2f}",
+                "Imbalance": f"{signal['imbalance']:.4f}",
+                "Volatility": f"{signal['volatility']:.2%}"
             })
         
         df = pd.DataFrame(data)
-        st.dataframe(df, use_container_width=True, hide_index=True)
         
-        # Show analysis info
-        st.markdown(f'''
-        <div style="background: rgba(255, 0, 0, 0.1); padding: 1rem; border-radius: 10px; margin-top: 1rem;">
-            <p style="color: #ff8888; font-size: 0.9rem; margin: 0;">
-                📊 Showing top {len(math_signals)} highest strength pairs • 
-                Formula: I = (V_bid - V_ask)/(V_bid + V_ask) • φ = Spread/Price • σ = Volatility
+        # Display with custom styling
+        st.dataframe(
+            df,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Pair": st.column_config.TextColumn("Trading Pair", width="small"),
+                "Signal": st.column_config.TextColumn("Direction", width="small"),
+                "Strength": st.column_config.ProgressColumn(
+                    "Strength %",
+                    format="%d%%",
+                    min_value=0,
+                    max_value=100,
+                    width="medium"
+                ),
+                "Price": st.column_config.TextColumn("Price", width="medium"),
+                "Imbalance": st.column_config.TextColumn("Volume Imbalance", width="medium"),
+                "Volatility": st.column_config.TextColumn("Volatility", width="medium")
+            }
+        )
+        
+        # Trading metrics
+        metrics = calculate_trading_metrics(math_signals)
+        if metrics:
+            col_met1, col_met2, col_met3, col_met4 = st.columns(4)
+            
+            with col_met1:
+                st.metric("Total Signals", metrics['total_signals'])
+            with col_met2:
+                st.metric("Buy Signals", metrics['buy_signals'])
+            with col_met3:
+                st.metric("Sell Signals", metrics['sell_signals'])
+            with col_met4:
+                st.metric("Avg Strength", f"{metrics['avg_strength']:.1f}%")
+    else:
+        st.info("No mathematical signals detected. Click 'Refresh Signals' to analyze market data.")
+    
+    # Bitnode Network Signal
+    st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+    st.markdown("### 🌐 BITNODE NETWORK SIGNAL")
+    
+    bitnode_signal = st.session_state.bitnode_signal
+    
+    if bitnode_signal['direction'] == "BUY":
+        signal_class = "signal-card signal-buy"
+        signal_icon = "📈"
+    elif bitnode_signal['direction'] == "SELL":
+        signal_class = "signal-card signal-sell"
+        signal_icon = "📉"
+    else:
+        signal_class = "signal-card"
+        signal_icon = "⚖️"
+    
+    st.markdown(f"""
+    <div class="{signal_class}">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <div>
+                <h3 style="color: #f1f5f9; margin: 0;">{signal_icon} {bitnode_signal['direction']} SIGNAL</h3>
+                <p style="color: #94a3b8; margin: 0.2rem 0;">Bitnode Network Analysis</p>
+            </div>
+            <div style="background: {'#10b981' if bitnode_signal['direction'] == 'BUY' else '#ef4444'}; 
+                        color: white; padding: 0.5rem 1rem; border-radius: 20px; font-weight: 600;">
+                {bitnode_signal['strength'].replace('_', ' ')}
+            </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-top: 1rem;">
+            <div class="metric-box">
+                <div style="color: #94a3b8; font-size: 0.8rem;">TOR % CHANGE</div>
+                <div style="color: {'#10b981' if bitnode_signal['delta_tor'] < 0 else '#ef4444'}; 
+                            font-size: 1.2rem; font-weight: 600;">
+                    {bitnode_signal['delta_tor']:+.3f}%
+                </div>
+            </div>
+            <div class="metric-box">
+                <div style="color: #94a3b8; font-size: 0.8rem;">ONION CONFIRMATION</div>
+                <div style="color: {'#10b981' if bitnode_signal['confirmed'] else '#ef4444'}; 
+                            font-size: 1.2rem; font-weight: 600;">
+                    {'✅ CONFIRMED' if bitnode_signal['confirmed'] else '⚠️ WEAK'}
+                </div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 1rem; padding: 1rem; background: rgba(15, 23, 42, 0.5); border-radius: 8px;">
+            <p style="color: #94a3b8; margin: 0; font-size: 0.9rem;">
+                🔍 <strong>Network Analysis:</strong> Tor node percentage change indicates {bitnode_signal['direction'].lower()} bias. 
+                {'Onion node confirmation strengthens signal.' if bitnode_signal['confirmed'] else 'Lack of onion confirmation reduces signal strength.'}
             </p>
         </div>
-        ''', unsafe_allow_html=True)
-    else:
-        st.info("No strong mathematical signals detected. Try refreshing.")
-    
-    # Last update info
-    st.markdown("---")
-    st.markdown(f'''
-    <div style="text-align: center; color: #ff6666; margin-top: 2rem;">
-        <p>🕒 Last Update: {st.session_state.last_update.strftime("%Y-%m-%d %H:%M:%S")}</p>
-        <p>© 2025 GODZILLERS • DUAL-ENGINE SIGNAL SYSTEM</p>
     </div>
-    ''', unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
+    
+    # Footer
+    st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+    
+    col_foot1, col_foot2, col_foot3 = st.columns([1, 2, 1])
+    with col_foot2:
+        st.markdown("""
+        <div style="text-align: center; color: #64748b; font-size: 0.8rem; padding: 1rem;">
+            <p>© 2025 Crypto Quant Signal Pro • Professional Trading System</p>
+            <p style="margin-top: 0.5rem;">Dual-engine signal analysis • Real-time data • For educational purposes only</p>
+            <p style="margin-top: 0.5rem; color: #475569;">
+                Last update: {} • Refresh count: {}
+            </p>
+        </div>
+        """.format(
+            st.session_state.refresh_time.strftime("%Y-%m-%d %H:%M:%S"),
+            st.session_state.get('refresh_count', 0)
+        ), unsafe_allow_html=True)
 
 # ========== MAIN APP ==========
 def main():
-    """Main app function"""
-    # Initialize session state
-    if 'logged_in' not in st.session_state:
-        st.session_state.logged_in = False
+    """Main application"""
+    
+    # Initialize data on first load
+    if st.session_state.authenticated and st.session_state.btc_price == 0:
+        btc_price = get_binance_price("BTCUSDT")
+        if btc_price:
+            st.session_state.btc_price = btc_price
     
     # Show login or dashboard
-    if not st.session_state.logged_in:
-        login_page()
+    if not st.session_state.authenticated:
+        login_system()
     else:
         main_dashboard()
 
